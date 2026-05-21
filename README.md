@@ -217,7 +217,7 @@ The pipeline is fully config-driven — bus maps, clock trees, peripheral lists,
 
 ## Acknowledgments
 
-This project stands on the shoulders of excellent open-source tools:
+This project stands on the shoulders of excellent tools:
 
 | Project | Role in ChipWhisper |
 |---------|---------------------|
