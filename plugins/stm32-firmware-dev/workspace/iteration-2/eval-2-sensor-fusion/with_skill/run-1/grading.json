@@ -1,0 +1,60 @@
+{
+  "expectations": [
+    {
+      "text": "Phase -1: Reports F103 vs F100 (QEMU) difference, especially clock limit (24MHz vs 72MHz)",
+      "passed": true,
+      "evidence": "dual MCP check with F103/F100 comparison table"
+    },
+    {
+      "text": "Phase 0: Queries embedded-docs for both I2C1 and SPI1 pin mapping and register config",
+      "passed": true,
+      "evidence": "queried embedded-docs for I2C1+SPI1 pin mapping/registers"
+    },
+    {
+      "text": "HMC5883L (0x1E) and MPU6050 (0x68) share I2C1 bus on PB6/PB7",
+      "passed": true,
+      "evidence": "regex:0x1E=Y; regex:0x68=Y"
+    },
+    {
+      "text": "OLED uses SPI1: PA5=SCK, PA7=MOSI, with PA4=RES and PA3=DC as GPIO outputs",
+      "passed": true,
+      "evidence": "regex:PA5.*SCK|SPI1_SCK=Y; regex:PA7.*MOSI|SPI1_MOSI=Y"
+    },
+    {
+      "text": "Sensor fusion uses Madgwick AHRS algorithm (not Mahony, not Kalman)",
+      "passed": true,
+      "evidence": "regex:Madgwick|madgwick"
+    },
+    {
+      "text": "Clock config has #ifdef SIMULATION for HSI-only mode to work with QEMU F100",
+      "passed": true,
+      "evidence": "regex:#ifdef SIMULATION|#ifndef SIMULATION"
+    },
+    {
+      "text": "Includes gyroscope bias calibration (collect samples at startup, subtract mean)",
+      "passed": true,
+      "evidence": "regex:bias|calibrat|zero_drift"
+    },
+    {
+      "text": "Phase 2: Uses start_sim + send_gdb_cmd to verify I2C1_CR1, SPI1_CR1 register values",
+      "passed": true,
+      "evidence": "QEMU sim verified vector table, caught 8KB RAM issue, GDB register checks"
+    },
+    {
+      "text": "All driver files present: hmc5883l, mpu6050, ssd1306, sensor_fusion, calibration",
+      "passed": false,
+      "evidence": "exists:src/hmc5883l.c=Y; exists:src/mpu6050.c=Y; exists:src/ssd1306.c=Y; exists:src/sensor_fusion.c=N; exists:src/calibration.c=N"
+    },
+    {
+      "text": "OLED uses software NSS (SSM=1, SSI=1) since 6-pin module has no CS pin",
+      "passed": true,
+      "evidence": "regex:SSM|SSI|software.*NSS"
+    }
+  ],
+  "summary": {
+    "passed": 9,
+    "failed": 1,
+    "total": 10,
+    "pass_rate": 0.9
+  }
+}

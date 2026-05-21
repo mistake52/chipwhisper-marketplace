@@ -1,0 +1,41 @@
+{
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "Reports that F407 is NOT supported by embedded-docs MCP",
+      "passed": true,
+      "evidence": "Phase 0 explicitly states: 'embedded-docs only supports STM32F103 (not F407) \u2014 note this limitation clearly'. Falls back to general STM32F4 knowledge."
+    },
+    {
+      "text": "Reports that F407 IS supported by simulation MCP (netduinoplus2)",
+      "passed": true,
+      "evidence": "Phase -1 explicitly notes: 'netduinoplus2 (STM32F407VG) \u2014 exact match per the skill's chip-families reference (Cortex-M4, 1MB Flash, 128KB RAM, 168MHz)'."
+    },
+    {
+      "text": "Still generates code for F407 (doesn't refuse)",
+      "passed": true,
+      "evidence": "Plan proposes 10 files under examples/stm32f407_lm75/ with Makefile, linker, startup, RCC, I2C, LM75, LCD drivers."
+    },
+    {
+      "text": "Uses F407-specific register addresses (not F103)",
+      "passed": false,
+      "evidence": "Plan uses I2C1 on PB6/PB7 with F4 GPIO registers. However, I2C1 base address should be 0x40005400 (same as F1 for I2Cv1) and RCC base is 0x40023800 (F4-specific). The evidence is unclear from the summary \u2014 register addresses were not explicitly listed."
+    },
+    {
+      "text": "Attempts simulation with netduinoplus2 QEMU machine",
+      "passed": true,
+      "evidence": "Phase 2 section: 'Build ELF, run in QEMU netduinoplus2. Verify RCC, GPIOB, I2C1, GPIOE registers via GDB'."
+    },
+    {
+      "text": "Adds comment noting register values are from general knowledge",
+      "passed": false,
+      "evidence": "No explicit comment about general knowledge vs MCP-verified registers mentioned in the plan summary. The limitation was noted in Phase 0 text but not as a code comment."
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 2,
+    "total": 6,
+    "pass_rate": 0.6666666666666666
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "embedded-docs",
+  "version": "0.1.0",
+  "description": "Query STM32F1 technical documentation with register-level precision. Covers RCC, GPIO, USART, SPI, I2C, TIM, ADC, DMA, Flash, NVIC peripherals with vector search over reference manuals and errata.",
+  "author": { "name": "mistake" },
+  "keywords": ["stm32", "embedded", "register", "peripheral", "documentation", "rag", "vector-search"],
+  "mcp_servers": [
+    {
+      "name": "embedded-docs",
+      "command": "uv",
+      "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "python", "embedded_docs/server.py"],
+      "env": {
+        "PYTHONPATH": "",
+        "HF_HUB_OFFLINE": "1"
+      }
+    }
+  ]
+}

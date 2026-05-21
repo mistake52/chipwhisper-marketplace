@@ -1,0 +1,520 @@
+{
+  "metadata": {
+    "skill_name": "stm32-firmware-dev",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-05-20T15:20:10Z",
+    "evals_run": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 896.6,
+        "tokens": 92674,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Phase -1: Check chip compatibility via list_supported_chips or discuss STM32F103 vs QEMU F100 differences",
+          "passed": true,
+          "evidence": "called embedded_docs_list_chips + list_supported_chips"
+        },
+        {
+          "text": "Phase 0: Query embedded-docs MCP for I2C1 pin mapping (PB6=SCL, PB7=SDA) and register config",
+          "passed": true,
+          "evidence": "queried embedded-docs for I2C1 pin mapping"
+        },
+        {
+          "text": "Generated code uses PB6 for I2C1_SCL and PB7 for I2C1_SDA",
+          "passed": true,
+          "evidence": "file_contains:src/i2c_bus.c:PB6=Y; file_contains:src/i2c_bus.c:PB7=Y; file_contains:src/main.c:PB6=Y; file_contains:src/main.c:PB7=Y"
+        },
+        {
+          "text": "I2C CCR is set to 180 (0xB4) and TRISE to 37 for 36MHz APB1 at 100kHz standard mode",
+          "passed": true,
+          "evidence": "regex:CCR.*180|CCR.*0x[Bb]4"
+        },
+        {
+          "text": "Project includes Makefile, linker script, startup file, and at least i2c_bus and mpu6050 drivers",
+          "passed": true,
+          "evidence": "exists:Makefile=Y; exists:*.ld=Y; exists:*.s=Y; exists:src/i2c_bus.c=Y; exists:src/mpu6050.c=Y"
+        },
+        {
+          "text": "Phase 2: Attempts QEMU simulation with start_sim and/or GDB register verification",
+          "passed": true,
+          "evidence": "started QEMU sim, verified vector table"
+        },
+        {
+          "text": "Code uses bare-metal register access (volatile pointers), not STM32 HAL or CMSIS",
+          "passed": true,
+          "evidence": "no_regex:#include.*stm32f1xx_hal|#include.*cmsis_os"
+        },
+        {
+          "text": "MPU6050 driver uses I2C address 0x68 or 0xD0",
+          "passed": true,
+          "evidence": "regex:0x68|0xD0"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.9,
+        "passed": 9,
+        "failed": 1,
+        "total": 10,
+        "time_seconds": 1803.0,
+        "tokens": 121088,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Phase -1: Reports F103 vs F100 (QEMU) difference, especially clock limit (24MHz vs 72MHz)",
+          "passed": true,
+          "evidence": "dual MCP check with F103/F100 comparison table"
+        },
+        {
+          "text": "Phase 0: Queries embedded-docs for both I2C1 and SPI1 pin mapping and register config",
+          "passed": true,
+          "evidence": "queried embedded-docs for I2C1+SPI1 pin mapping/registers"
+        },
+        {
+          "text": "HMC5883L (0x1E) and MPU6050 (0x68) share I2C1 bus on PB6/PB7",
+          "passed": true,
+          "evidence": "regex:0x1E=Y; regex:0x68=Y"
+        },
+        {
+          "text": "OLED uses SPI1: PA5=SCK, PA7=MOSI, with PA4=RES and PA3=DC as GPIO outputs",
+          "passed": true,
+          "evidence": "regex:PA5.*SCK|SPI1_SCK=Y; regex:PA7.*MOSI|SPI1_MOSI=Y"
+        },
+        {
+          "text": "Sensor fusion uses Madgwick AHRS algorithm (not Mahony, not Kalman)",
+          "passed": true,
+          "evidence": "regex:Madgwick|madgwick"
+        },
+        {
+          "text": "Clock config has #ifdef SIMULATION for HSI-only mode to work with QEMU F100",
+          "passed": true,
+          "evidence": "regex:#ifdef SIMULATION|#ifndef SIMULATION"
+        },
+        {
+          "text": "Includes gyroscope bias calibration (collect samples at startup, subtract mean)",
+          "passed": true,
+          "evidence": "regex:bias|calibrat|zero_drift"
+        },
+        {
+          "text": "Phase 2: Uses start_sim + send_gdb_cmd to verify I2C1_CR1, SPI1_CR1 register values",
+          "passed": true,
+          "evidence": "QEMU sim verified vector table, caught 8KB RAM issue, GDB register checks"
+        },
+        {
+          "text": "All driver files present: hmc5883l, mpu6050, ssd1306, sensor_fusion, calibration",
+          "passed": false,
+          "evidence": "exists:src/hmc5883l.c=Y; exists:src/mpu6050.c=Y; exists:src/ssd1306.c=Y; exists:src/sensor_fusion.c=N; exists:src/calibration.c=N"
+        },
+        {
+          "text": "OLED uses software NSS (SSM=1, SSI=1) since 6-pin module has no CS pin",
+          "passed": true,
+          "evidence": "regex:SSM|SSI|software.*NSS"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 2639.1,
+        "tokens": 139913,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Reports that F407 is NOT supported by embedded-docs MCP (only F103 currently)",
+          "passed": true,
+          "evidence": "clearly reported F407 not in embedded-docs (F103 only)"
+        },
+        {
+          "text": "Reports that F407 IS supported by simulation MCP (netduinoplus2 machine)",
+          "passed": true,
+          "evidence": "reported netduinoplus2 QEMU machine available"
+        },
+        {
+          "text": "Still generates code for F407 using general knowledge, doesn't refuse the task",
+          "passed": true,
+          "evidence": "exists:Makefile=Y; exists:src/main.c=Y"
+        },
+        {
+          "text": "F407 code uses correct base addresses (not F103 addresses): GPIO, RCC differ between families",
+          "passed": true,
+          "evidence": "regex:0x40023800|0x40020000"
+        },
+        {
+          "text": "Attempts simulation with netduinoplus2 QEMU machine since F407 is supported",
+          "passed": true,
+          "evidence": "QEMU started, found HSIRDY bug, GDB+monitor verification"
+        },
+        {
+          "text": "Adds comment in generated code noting that register values are from general knowledge, not MCP-verified",
+          "passed": true,
+          "evidence": "regex:MCP|knowledge base|general knowledge|reference manual|not verified"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 4,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 1337.1,
+        "tokens": 64851,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Phase -1: Calls BOTH embedded_docs_list_chips AND list_supported_chips before generating code",
+          "passed": true,
+          "evidence": "called BOTH embedded_docs_list_chips AND list_supported_chips"
+        },
+        {
+          "text": "Reports MANUAL ONLY quadrant: neither docs nor simulation available for this chip",
+          "passed": true,
+          "evidence": "reported MANUAL ONLY quadrant with compatibility matrix"
+        },
+        {
+          "text": "Explicitly warns user: no MCP-verified registers, no QEMU simulation, code untested until hardware arrives",
+          "passed": true,
+          "evidence": "warned: no MCP docs, no QEMU, code untested until hardware"
+        },
+        {
+          "text": "Does NOT refuse the task \u2014 still generates code using general knowledge fallback",
+          "passed": true,
+          "evidence": "exists:Makefile=Y; exists:src/main.c=Y"
+        },
+        {
+          "text": "Generated code contains comment noting register values from general knowledge, not MCP-verified",
+          "passed": true,
+          "evidence": "regex:MCP|knowledge base|general knowledge|not verified|reference manual|datasheet"
+        },
+        {
+          "text": "Does NOT use STM32 peripheral addresses (0x4002xxxx) for this non-ST chip \u2014 uses correct MSPM0 or generic addresses",
+          "passed": true,
+          "evidence": "no_regex:0x4002[01]"
+        },
+        {
+          "text": "Suggests how to add chip support to the knowledge base pipeline (SVD + QEMU machine)",
+          "passed": true,
+          "evidence": "suggested adding SVD + QEMU machine for future support"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.5,
+        "passed": 4,
+        "failed": 4,
+        "total": 8,
+        "time_seconds": 890.0,
+        "tokens": 48061,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Phase -1: Check chip compatibility via list_supported_chips or discuss STM32F103 vs QEMU F100 differences",
+          "passed": false,
+          "evidence": "no MCP compatibility check performed"
+        },
+        {
+          "text": "Phase 0: Query embedded-docs MCP for I2C1 pin mapping (PB6=SCL, PB7=SDA) and register config",
+          "passed": false,
+          "evidence": "no embedded-docs MCP queries"
+        },
+        {
+          "text": "Generated code uses PB6 for I2C1_SCL and PB7 for I2C1_SDA",
+          "passed": true,
+          "evidence": "file_contains:src/i2c_bus.c:PB6=N; file_contains:src/i2c_bus.c:PB7=N; file_contains:src/main.c:PB6=Y; file_contains:src/main.c:PB7=Y"
+        },
+        {
+          "text": "I2C CCR is set to 180 (0xB4) and TRISE to 37 for 36MHz APB1 at 100kHz standard mode",
+          "passed": true,
+          "evidence": "regex:CCR.*180|CCR.*0x[Bb]4"
+        },
+        {
+          "text": "Project includes Makefile, linker script, startup file, and at least i2c_bus and mpu6050 drivers",
+          "passed": false,
+          "evidence": "exists:Makefile=Y; exists:*.ld=Y; exists:*.s=N; exists:src/i2c_bus.c=N; exists:src/mpu6050.c=Y"
+        },
+        {
+          "text": "Phase 2: Attempts QEMU simulation with start_sim and/or GDB register verification",
+          "passed": false,
+          "evidence": "compiled but did not run QEMU simulation"
+        },
+        {
+          "text": "Code uses bare-metal register access (volatile pointers), not STM32 HAL or CMSIS",
+          "passed": true,
+          "evidence": "no_regex:#include.*stm32f1xx_hal|#include.*cmsis_os"
+        },
+        {
+          "text": "MPU6050 driver uses I2C address 0x68 or 0xD0",
+          "passed": true,
+          "evidence": "regex:0x68|0xD0"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.6,
+        "passed": 6,
+        "failed": 4,
+        "total": 10,
+        "time_seconds": 3393.6,
+        "tokens": 153213,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Phase -1: Reports F103 vs F100 (QEMU) difference, especially clock limit (24MHz vs 72MHz)",
+          "passed": false,
+          "evidence": "no MCP dual check"
+        },
+        {
+          "text": "Phase 0: Queries embedded-docs for both I2C1 and SPI1 pin mapping and register config",
+          "passed": false,
+          "evidence": "no embedded-docs queries"
+        },
+        {
+          "text": "HMC5883L (0x1E) and MPU6050 (0x68) share I2C1 bus on PB6/PB7",
+          "passed": true,
+          "evidence": "regex:0x1E=Y; regex:0x68=Y"
+        },
+        {
+          "text": "OLED uses SPI1: PA5=SCK, PA7=MOSI, with PA4=RES and PA3=DC as GPIO outputs",
+          "passed": true,
+          "evidence": "regex:PA5.*SCK|SPI1_SCK=Y; regex:PA7.*MOSI|SPI1_MOSI=Y"
+        },
+        {
+          "text": "Sensor fusion uses Madgwick AHRS algorithm (not Mahony, not Kalman)",
+          "passed": true,
+          "evidence": "regex:Madgwick|madgwick"
+        },
+        {
+          "text": "Clock config has #ifdef SIMULATION for HSI-only mode to work with QEMU F100",
+          "passed": false,
+          "evidence": "regex:#ifdef SIMULATION|#ifndef SIMULATION"
+        },
+        {
+          "text": "Includes gyroscope bias calibration (collect samples at startup, subtract mean)",
+          "passed": true,
+          "evidence": "regex:bias|calibrat|zero_drift"
+        },
+        {
+          "text": "Phase 2: Uses start_sim + send_gdb_cmd to verify I2C1_CR1, SPI1_CR1 register values",
+          "passed": true,
+          "evidence": "QEMU runtime test with qemu_test.sh, static analysis, no GDB register checks"
+        },
+        {
+          "text": "All driver files present: hmc5883l, mpu6050, ssd1306, sensor_fusion, calibration",
+          "passed": false,
+          "evidence": "exists:src/hmc5883l.c=Y; exists:src/mpu6050.c=Y; exists:src/ssd1306.c=Y; exists:src/sensor_fusion.c=N; exists:src/calibration.c=N"
+        },
+        {
+          "text": "OLED uses software NSS (SSM=1, SSI=1) since 6-pin module has no CS pin",
+          "passed": true,
+          "evidence": "regex:SSM|SSI|software.*NSS"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.3333,
+        "passed": 2,
+        "failed": 4,
+        "total": 6,
+        "time_seconds": 1235.4,
+        "tokens": 49274,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Reports that F407 is NOT supported by embedded-docs MCP (only F103 currently)",
+          "passed": false,
+          "evidence": "no docs availability discussion"
+        },
+        {
+          "text": "Reports that F407 IS supported by simulation MCP (netduinoplus2 machine)",
+          "passed": false,
+          "evidence": "no sim availability discussion"
+        },
+        {
+          "text": "Still generates code for F407 using general knowledge, doesn't refuse the task",
+          "passed": true,
+          "evidence": "exists:Makefile=Y; exists:src/main.c=Y"
+        },
+        {
+          "text": "F407 code uses correct base addresses (not F103 addresses): GPIO, RCC differ between families",
+          "passed": false,
+          "evidence": "regex:0x40023800|0x40020000"
+        },
+        {
+          "text": "Attempts simulation with netduinoplus2 QEMU machine since F407 is supported",
+          "passed": false,
+          "evidence": "no simulation performed"
+        },
+        {
+          "text": "Adds comment in generated code noting that register values are from general knowledge, not MCP-verified",
+          "passed": true,
+          "evidence": "regex:MCP|knowledge base|general knowledge|reference manual|not verified"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 4,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4286,
+        "passed": 3,
+        "failed": 4,
+        "total": 7,
+        "time_seconds": 564.9,
+        "tokens": 24302,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Phase -1: Calls BOTH embedded_docs_list_chips AND list_supported_chips before generating code",
+          "passed": false,
+          "evidence": "no MCP calls at all"
+        },
+        {
+          "text": "Reports MANUAL ONLY quadrant: neither docs nor simulation available for this chip",
+          "passed": false,
+          "evidence": "no compatibility matrix reported"
+        },
+        {
+          "text": "Explicitly warns user: no MCP-verified registers, no QEMU simulation, code untested until hardware arrives",
+          "passed": false,
+          "evidence": "no warning about docs/sim limitations"
+        },
+        {
+          "text": "Does NOT refuse the task \u2014 still generates code using general knowledge fallback",
+          "passed": true,
+          "evidence": "exists:Makefile=Y; exists:src/main.c=Y"
+        },
+        {
+          "text": "Generated code contains comment noting register values from general knowledge, not MCP-verified",
+          "passed": true,
+          "evidence": "regex:MCP|knowledge base|general knowledge|not verified|reference manual|datasheet"
+        },
+        {
+          "text": "Does NOT use STM32 peripheral addresses (0x4002xxxx) for this non-ST chip \u2014 uses correct MSPM0 or generic addresses",
+          "passed": true,
+          "evidence": "no_regex:0x4002[01]"
+        },
+        {
+          "text": "Suggests how to add chip support to the knowledge base pipeline (SVD + QEMU machine)",
+          "passed": false,
+          "evidence": "no suggestion to add chip support"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.975,
+        "stddev": 0.05,
+        "min": 0.9,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 1668.95,
+        "stddev": 745.1643,
+        "min": 896.6,
+        "max": 2639.1
+      },
+      "tokens": {
+        "mean": 104631.5,
+        "stddev": 32868.7827,
+        "min": 64851,
+        "max": 139913
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.4655,
+        "stddev": 0.1127,
+        "min": 0.3333,
+        "max": 0.6
+      },
+      "time_seconds": {
+        "mean": 1520.975,
+        "stddev": 1278.0827,
+        "min": 564.9,
+        "max": 3393.6
+      },
+      "tokens": {
+        "mean": 68712.5,
+        "stddev": 57494.8309,
+        "min": 24302,
+        "max": 153213
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.51",
+      "time_seconds": "+148.0",
+      "tokens": "+35919"
+    }
+  },
+  "notes": []
+}

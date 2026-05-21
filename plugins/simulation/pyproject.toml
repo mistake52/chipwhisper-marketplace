@@ -1,0 +1,12 @@
+[project]
+name = "simulation-mcp"
+version = "0.1.0"
+description = "QEMU firmware simulation MCP server for STM32 microcontrollers"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.19",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,0 +1,61 @@
+{
+  "run": "without_skill",
+  "expectations": [
+    {
+      "text": "Phase -1: Reports F103 vs F100 QEMU difference (24MHz vs 72MHz)",
+      "passed": false,
+      "evidence": "No mention of list_supported_chips. No discussion of F100 vs F103 QEMU differences. No #ifdef SIMULATION clock fallback."
+    },
+    {
+      "text": "Phase 0: Queries embedded-docs for both I2C1 and SPI1",
+      "passed": false,
+      "evidence": "No MCP queries used. All pin assignments and register values from general knowledge only."
+    },
+    {
+      "text": "Shared I2C bus: HMC5883L (0x1E) and MPU6050 (0x68) on PB6/PB7",
+      "passed": true,
+      "evidence": "Correctly identified PB6/PB7 for I2C1. Both sensors on same bus with correct addresses."
+    },
+    {
+      "text": "SPI OLED pins: PA5=SCK, PA7=MOSI, PA4=RES, PA3=DC",
+      "passed": true,
+      "evidence": "General knowledge correctly identifies SPI1 default pins (PA5/PA7) and repurposes PA4/PA3 as GPIO for RES/DC."
+    },
+    {
+      "text": "Madgwick AHRS algorithm used",
+      "passed": true,
+      "evidence": "Plan names 'src/sensor_fusion.c/h (Madgwick AHRS)' in file listing."
+    },
+    {
+      "text": "Clock config has #ifdef SIMULATION for QEMU compat",
+      "passed": false,
+      "evidence": "No #ifdef SIMULATION mentioned. QEMU test script is separate but no compile-time clock adaptation for F100/F103 mismatch."
+    },
+    {
+      "text": "Gyroscope bias calibration included",
+      "passed": true,
+      "evidence": "Plan includes 'src/calibration.c/h' and mentions gyro bias + mag hard-iron calibration."
+    },
+    {
+      "text": "Phase 2: Simulation GDB verification planned",
+      "passed": false,
+      "evidence": "Mentions QEMU test script (qemu_test.sh) and verify_regs.qemu but does not use simulation MCP tools (start_sim, send_gdb_cmd). Just a generic shell script approach."
+    },
+    {
+      "text": "All driver files present",
+      "passed": true,
+      "evidence": "20 files planned covering all drivers: hmc5883l, mpu6050, ssd1306, sensor_fusion, calibration, rcc, systick, i2c_bus, spi_bus, fonts, main."
+    },
+    {
+      "text": "OLED uses software NSS (6-pin no CS)",
+      "passed": false,
+      "evidence": "No mention of SSM=1 or software NSS configuration for the 6-pin OLED without CS pin."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 5,
+    "total": 10,
+    "pass_rate": 0.5
+  }
+}

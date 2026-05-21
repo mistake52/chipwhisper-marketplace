@@ -1,0 +1,20 @@
+[project]
+name = "embedded-docs-mcp"
+version = "0.1.0"
+description = "STM32F1 embedded documentation query MCP server with register-level RAG"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.19",
+    "sentence-transformers>=3.0",
+    "qdrant-client>=1.0",
+    "networkx>=3.0",
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+    "lxml>=5.0",
+    "pydantic>=2.0",
+    "cmsis-svd>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

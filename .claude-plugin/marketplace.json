@@ -1,0 +1,11 @@
+{
+  "name": "chipwhisper-marketplace",
+  "description": "STM32 bare-metal firmware development toolkit — MCP servers for documentation lookup, QEMU simulation, and serial hardware debugging, plus a firmware development skill for Claude Code.",
+  "version": "0.1.0",
+  "plugins": [
+    { "name": "embedded-docs", "path": "plugins/embedded-docs", "description": "Query STM32F1 technical documentation with register-level precision" },
+    { "name": "serial-debug", "path": "plugins/serial-debug", "description": "Serial port debugging for STM32 development boards" },
+    { "name": "simulation", "path": "plugins/simulation", "description": "Run STM32 firmware in QEMU without physical hardware" },
+    { "name": "stm32-firmware-dev", "path": "plugins/stm32-firmware-dev", "description": "Complete STM32 bare-metal firmware development skill" }
+  ]
+}

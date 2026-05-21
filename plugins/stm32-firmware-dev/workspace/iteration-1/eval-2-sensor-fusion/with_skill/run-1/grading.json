@@ -1,0 +1,61 @@
+{
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "Phase -1: Reports F103 vs F100 QEMU difference (24MHz vs 72MHz)",
+      "passed": true,
+      "evidence": "Detailed Phase -1 report: stm32vldiscovery emulates F100RBT6 (24MHz max). PLLRDY never asserts for 72MHz. Mitigation: #ifdef SIMULATION uses HSI 8MHz."
+    },
+    {
+      "text": "Phase 0: Queries embedded-docs for both I2C1 and SPI1",
+      "passed": true,
+      "evidence": "16 MCP tool uses. 5 embedded-docs queries: I2C1 pins, SPI1 pins, GPIO config, I2C timing (CCR=180, TRISE=37), clock tree. All register values from RM0008 Rev 21."
+    },
+    {
+      "text": "Shared I2C bus: HMC5883L (0x1E) and MPU6050 (0x68) on PB6/PB7",
+      "passed": true,
+      "evidence": "Plan confirms both sensors on I2C1 (PB6/PB7). HMC5883L at 0x1E, MPU6050 at 0x68. Shared bus explicitly mentioned."
+    },
+    {
+      "text": "SPI OLED pins: PA5=SCK, PA7=MOSI, PA4=RES, PA3=DC",
+      "passed": true,
+      "evidence": "MCP query confirmed: PA5(SCK, AF_PP 0xB), PA7(MOSI, AF_PP 0xB), PA4(RES, GP_PP 0x3), PA3(DC, GP_PP 0x3)."
+    },
+    {
+      "text": "Madgwick AHRS algorithm used",
+      "passed": true,
+      "evidence": "Plan explicitly names 'Madgwick AHRS fusion algorithm' in file listing and description."
+    },
+    {
+      "text": "Clock config has #ifdef SIMULATION for QEMU compat",
+      "passed": true,
+      "evidence": "Phase -1 explicitly proposes #ifdef SIMULATION with HSI 8MHz fallback. RCC driver described as 'with #ifdef SIMULATION dual-path'."
+    },
+    {
+      "text": "Gyroscope bias calibration included",
+      "passed": true,
+      "evidence": "Plan includes calibration.c/h with: gyro bias (200 sample mean), mag hard-iron, temperature compensation."
+    },
+    {
+      "text": "Phase 2: Simulation GDB verification planned",
+      "passed": true,
+      "evidence": "Phase 2 section lists specific GDB checks: RCC_CR, RCC_CFGR, GPIOx_CRL, I2C1_CR1/CCR/TRISE, SPI1_CR1. Explicitly notes limitations (no sensor communication)."
+    },
+    {
+      "text": "All driver files present",
+      "passed": true,
+      "evidence": "15 files planned including hmc5883l, mpu6050, ssd1306, sensor_fusion, calibration, fonts.h, i2c_bus, spi_bus, rcc, systick."
+    },
+    {
+      "text": "OLED uses software NSS (6-pin no CS)",
+      "passed": true,
+      "evidence": "Plan states SPI1 CR1: SSM=1, SSI=1 (software NSS). Explicitly notes OLED CS to GND (permanently enabled)."
+    }
+  ],
+  "summary": {
+    "passed": 10,
+    "failed": 0,
+    "total": 10,
+    "pass_rate": 1.0
+  }
+}

@@ -1,0 +1,206 @@
+
+Discarded input sections
+
+ .text          0x00000000        0x0 main.o
+ .data          0x00000000        0x0 main.o
+ .bss           0x00000000        0x0 main.o
+ .comment       0x00000000       0x27 main.o
+ .text          0x00000000        0x0 mpu6050.o
+ .data          0x00000000        0x0 mpu6050.o
+ .bss           0x00000000        0x0 mpu6050.o
+ .text.mpu6050_read_burst
+                0x00000000       0x2c mpu6050.o
+ .comment       0x00000000       0x27 mpu6050.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+FLASH            0x08000000         0x00010000         xr
+RAM              0x20000000         0x00005000         xrw
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD /usr/lib/gcc/arm-none-eabi/13.2.1/../../../arm-none-eabi/lib/thumb/v7-m/nofp/libc.a
+LOAD /usr/lib/gcc/arm-none-eabi/13.2.1/thumb/v7-m/nofp/libgcc.a
+LOAD main.o
+LOAD mpu6050.o
+                0x20005000                        _estack = (ORIGIN (RAM) + LENGTH (RAM))
+
+.isr_vector     0x08000000       0xec
+                0x08000000                        . = ALIGN (0x4)
+ *(.isr_vector)
+ .isr_vector    0x08000000       0xec main.o
+                0x08000000                g_pfnVectors
+                0x080000ec                        . = ALIGN (0x4)
+
+.text           0x080000ec      0xa6c
+                0x080000ec                        . = ALIGN (0x4)
+ *(.text)
+ *(.text*)
+ .text.Default_Handler
+                0x080000ec        0x4 main.o
+                0x080000ec                Default_Handler
+ .text.SysTick_Handler
+                0x080000f0       0x10 main.o
+                0x080000f0                SysTick_Handler
+ .text.uart_print
+                0x08000100       0x1c main.o
+ .text.uart_print_int
+                0x0800011c       0x78 main.o
+ .text.uart_print_fixed.constprop.0
+                0x08000194       0x84 main.o
+ .text.delay_ms
+                0x08000218       0x14 main.o
+                0x08000218                delay_ms
+ .text.startup.main
+                0x0800022c      0x38c main.o
+                0x0800022c                main
+ .text.Reset_Handler
+                0x080005b8       0x60 main.o
+                0x080005b8                Reset_Handler
+ .text.mpu6050_read_burst.part.0
+                0x08000618      0x174 mpu6050.o
+ .text.mpu6050_i2c_init
+                0x0800078c       0x44 mpu6050.o
+                0x0800078c                mpu6050_i2c_init
+ .text.mpu6050_write_reg
+                0x080007d0       0x80 mpu6050.o
+                0x080007d0                mpu6050_write_reg
+ .text.mpu6050_read_reg
+                0x08000850       0xbc mpu6050.o
+                0x08000850                mpu6050_read_reg
+ .text.mpu6050_init
+                0x0800090c       0x44 mpu6050.o
+                0x0800090c                mpu6050_init
+ .text.mpu6050_read_all
+                0x08000950       0x78 mpu6050.o
+                0x08000950                mpu6050_read_all
+ *(.rodata)
+ *(.rodata*)
+ .rodata.main.str1.4
+                0x080009c8      0x190 main.o
+                                0x193 (size before relaxing)
+                0x08000b58                        . = ALIGN (0x4)
+                0x08000b58                        _etext = .
+                0x08000b58                        _sidata = LOADADDR (.data)
+
+.glue_7         0x08000b58        0x0
+ .glue_7        0x08000b58        0x0 linker stubs
+
+.glue_7t        0x08000b58        0x0
+ .glue_7t       0x08000b58        0x0 linker stubs
+
+.vfp11_veneer   0x08000b58        0x0
+ .vfp11_veneer  0x08000b58        0x0 linker stubs
+
+.v4_bx          0x08000b58        0x0
+ .v4_bx         0x08000b58        0x0 linker stubs
+
+.iplt           0x08000b58        0x0
+ .iplt          0x08000b58        0x0 main.o
+
+.rel.dyn        0x08000b58        0x0
+ .rel.iplt      0x08000b58        0x0 main.o
+
+.data           0x20000000        0x0 load address 0x08000b58
+                0x20000000                        . = ALIGN (0x4)
+                0x20000000                        _sdata = .
+ *(.data)
+ *(.data*)
+                0x20000000                        . = ALIGN (0x4)
+                0x20000000                        _edata = .
+
+.igot.plt       0x20000000        0x0 load address 0x08000b58
+ .igot.plt      0x20000000        0x0 main.o
+
+.bss            0x20000000        0x4 load address 0x08000b58
+                0x20000000                        . = ALIGN (0x4)
+                0x20000000                        _sbss = .
+ *(.bss)
+ *(.bss*)
+ .bss.g_ms      0x20000000        0x4 main.o
+ *(COMMON)
+                0x20000004                        . = ALIGN (0x4)
+                0x20000004                        _ebss = .
+
+/DISCARD/
+ *(.ARM.exidx*)
+ *(.comment)
+ *(.note*)
+OUTPUT(firmware.elf elf32-littlearm)
+LOAD linker stubs
+
+.ARM.attributes
+                0x00000000       0x2d
+ .ARM.attributes
+                0x00000000       0x2d main.o
+ .ARM.attributes
+                0x0000002d       0x2d mpu6050.o
+
+.debug_info     0x00000000     0x1480
+ .debug_info    0x00000000      0xb81 main.o
+ .debug_info    0x00000b81      0x8ff mpu6050.o
+
+.debug_abbrev   0x00000000      0x721
+ .debug_abbrev  0x00000000      0x3ea main.o
+ .debug_abbrev  0x000003ea      0x337 mpu6050.o
+
+.debug_loclists
+                0x00000000      0x7b2
+ .debug_loclists
+                0x00000000      0x370 main.o
+ .debug_loclists
+                0x00000370      0x442 mpu6050.o
+
+.debug_aranges  0x00000000       0xa8
+ .debug_aranges
+                0x00000000       0x58 main.o
+ .debug_aranges
+                0x00000058       0x50 mpu6050.o
+
+.debug_rnglists
+                0x00000000      0x178
+ .debug_rnglists
+                0x00000000       0xda main.o
+ .debug_rnglists
+                0x000000da       0x9e mpu6050.o
+
+.debug_line     0x00000000     0x1278
+ .debug_line    0x00000000      0xa79 main.o
+ .debug_line    0x00000a79      0x7ff mpu6050.o
+
+.debug_str      0x00000000      0x3cd
+ .debug_str     0x00000000      0x3cd main.o
+                                0x382 (size before relaxing)
+ .debug_str     0x000003cd      0x274 mpu6050.o
+
+.debug_frame    0x00000000      0x1ac
+ .debug_frame   0x00000000       0xd8 main.o
+ .debug_frame   0x000000d8       0xd4 mpu6050.o
+
+Cross Reference Table
+
+Symbol                                            File
+Default_Handler                                   main.o
+Reset_Handler                                     main.o
+SysTick_Handler                                   main.o
+_ebss                                             main.o
+_edata                                            main.o
+_estack                                           main.o
+_sbss                                             main.o
+_sdata                                            main.o
+_sidata                                           main.o
+delay_ms                                          main.o
+                                                  mpu6050.o
+g_pfnVectors                                      main.o
+main                                              main.o
+mpu6050_i2c_init                                  mpu6050.o
+                                                  main.o
+mpu6050_init                                      mpu6050.o
+                                                  main.o
+mpu6050_read_all                                  mpu6050.o
+                                                  main.o
+mpu6050_read_burst                                mpu6050.o
+mpu6050_read_reg                                  mpu6050.o
+mpu6050_write_reg                                 mpu6050.o

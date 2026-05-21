@@ -1,0 +1,17 @@
+{
+  "name": "simulation",
+  "version": "0.1.0",
+  "description": "Run STM32 firmware in QEMU without physical hardware — start/stop simulation, send GDB commands, inspect registers and memory. Supports STM32F103C8 and STM32F407VG.",
+  "author": { "name": "mistake" },
+  "keywords": ["stm32", "qemu", "simulation", "gdb", "firmware", "embedded", "cortex-m"],
+  "mcp_servers": [
+    {
+      "name": "simulation",
+      "command": "uv",
+      "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "python", "-m", "simulation_mcp.server"],
+      "env": {
+        "PYTHONPATH": ""
+      }
+    }
+  ]
+}

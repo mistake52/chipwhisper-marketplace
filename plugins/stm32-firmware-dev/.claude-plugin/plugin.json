@@ -1,0 +1,8 @@
+{
+  "name": "stm32-firmware-dev",
+  "version": "0.1.0",
+  "description": "Complete STM32 bare-metal firmware development workflow using MCP-assisted documentation lookup, QEMU simulation verification, and serial hardware debugging.",
+  "author": { "name": "mistake" },
+  "keywords": ["stm32", "firmware", "embedded", "bare-metal", "driver", "sensor", "mcu", "cortex-m"],
+  "skills": ["./skills/stm32-firmware-dev"]
+}

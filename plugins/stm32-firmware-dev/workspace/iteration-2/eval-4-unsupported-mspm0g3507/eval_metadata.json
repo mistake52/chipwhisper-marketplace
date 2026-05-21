@@ -1,0 +1,14 @@
+{
+  "eval_id": 4,
+  "eval_name": "unsupported-chip-mspm0g3507",
+  "prompt": "用 MSPM0G3507 做一个简单的温控风扇：读取内部温度传感器，温度超过 30°C 就开风扇（GPIO 控制），低于 25°C 就关。用裸机寄存器编程。",
+  "assertions": [
+    "dual_mcp_check_both_called",
+    "report_manual_only_quadrant",
+    "clear_warning_to_user",
+    "still_generates_code",
+    "limitation_comment_in_code",
+    "no_fake_stm32_registers",
+    "suggests_adding_chip_support"
+  ]
+}

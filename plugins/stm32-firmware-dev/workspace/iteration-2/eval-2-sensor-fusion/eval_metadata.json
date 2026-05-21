@@ -1,0 +1,17 @@
+{
+  "eval_id": 2,
+  "eval_name": "sensor-fusion-compass",
+  "prompt": "要给 stm32f103 做一个电子罗盘：HMC5883L 磁力计 + MPU6050 六轴传感器做融合，用 Madgwick AHRS 算方位角，结果显示在 0.96 寸 SPI OLED 上。传感器在同一个 I2C 总线上，OLED 是 6 针的（SCK SDA RES DC）。先只用 QEMU 仿真验证寄存器初始化对不对，硬件还没到。",
+  "assertions": [
+    "phase_minus_one_compat_check",
+    "mcp_multi_peripheral_query",
+    "shared_i2c_bus",
+    "spi_oled_pins",
+    "madgwick_ahrs",
+    "simulation_ifdef",
+    "gyro_calibration",
+    "sim_gdb_verification",
+    "complete_drivers",
+    "oled_no_cs_pin"
+  ]
+}

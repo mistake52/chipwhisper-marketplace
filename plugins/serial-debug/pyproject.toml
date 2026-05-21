@@ -1,0 +1,13 @@
+[project]
+name = "serial-debug-mcp"
+version = "0.1.0"
+description = "Serial port debugging MCP server for STM32 development boards"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.19",
+    "pyserial>=3.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

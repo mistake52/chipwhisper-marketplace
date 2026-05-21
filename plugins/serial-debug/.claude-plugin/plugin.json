@@ -1,0 +1,17 @@
+{
+  "name": "serial-debug",
+  "version": "0.1.0",
+  "description": "Serial port debugging for STM32 development boards — list ports, open/close sessions, send/receive data. Bridges Claude Code to physical hardware via USB CDC ACM.",
+  "author": { "name": "mistake" },
+  "keywords": ["stm32", "serial", "uart", "debug", "hardware", "embedded"],
+  "mcp_servers": [
+    {
+      "name": "serial-debug",
+      "command": "uv",
+      "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "python", "-m", "serial_debug_mcp.server"],
+      "env": {
+        "PYTHONPATH": ""
+      }
+    }
+  ]
+}

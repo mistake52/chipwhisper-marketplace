@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "Reports that F407 is NOT supported by embedded-docs MCP (only F103 currently)",
+      "passed": true,
+      "evidence": "clearly reported F407 not in embedded-docs (F103 only)"
+    },
+    {
+      "text": "Reports that F407 IS supported by simulation MCP (netduinoplus2 machine)",
+      "passed": true,
+      "evidence": "reported netduinoplus2 QEMU machine available"
+    },
+    {
+      "text": "Still generates code for F407 using general knowledge, doesn't refuse the task",
+      "passed": true,
+      "evidence": "exists:Makefile=Y; exists:src/main.c=Y"
+    },
+    {
+      "text": "F407 code uses correct base addresses (not F103 addresses): GPIO, RCC differ between families",
+      "passed": true,
+      "evidence": "regex:0x40023800|0x40020000"
+    },
+    {
+      "text": "Attempts simulation with netduinoplus2 QEMU machine since F407 is supported",
+      "passed": true,
+      "evidence": "QEMU started, found HSIRDY bug, GDB+monitor verification"
+    },
+    {
+      "text": "Adds comment in generated code noting that register values are from general knowledge, not MCP-verified",
+      "passed": true,
+      "evidence": "regex:MCP|knowledge base|general knowledge|reference manual|not verified"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

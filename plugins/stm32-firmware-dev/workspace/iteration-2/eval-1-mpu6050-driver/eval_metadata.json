@@ -1,0 +1,15 @@
+{
+  "eval_id": 1,
+  "eval_name": "mpu6050-driver",
+  "prompt": "我用 STM32F103C8T6 核心板接了个 MPU6050 模块（VCC GND SCL SDA），I2C 地址是 0x68。帮我写一个驱动，读取加速度和角速度数据，每秒打印一次到串口。用裸机寄存器编程，不用 HAL。",
+  "assertions": [
+    "phase_minus_one_compat_check",
+    "mcp_i2c_pin_query",
+    "correct_i2c_pins",
+    "i2c_timing_registers",
+    "complete_project_structure",
+    "sim_verification_attempted",
+    "bare_metal_no_hal",
+    "mpu6050_i2c_addr"
+  ]
+}

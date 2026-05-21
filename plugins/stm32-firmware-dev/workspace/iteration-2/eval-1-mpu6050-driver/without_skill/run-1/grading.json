@@ -1,0 +1,50 @@
+{
+  "expectations": [
+    {
+      "text": "Phase -1: Check chip compatibility via list_supported_chips or discuss STM32F103 vs QEMU F100 differences",
+      "passed": false,
+      "evidence": "no MCP compatibility check performed"
+    },
+    {
+      "text": "Phase 0: Query embedded-docs MCP for I2C1 pin mapping (PB6=SCL, PB7=SDA) and register config",
+      "passed": false,
+      "evidence": "no embedded-docs MCP queries"
+    },
+    {
+      "text": "Generated code uses PB6 for I2C1_SCL and PB7 for I2C1_SDA",
+      "passed": true,
+      "evidence": "file_contains:src/i2c_bus.c:PB6=N; file_contains:src/i2c_bus.c:PB7=N; file_contains:src/main.c:PB6=Y; file_contains:src/main.c:PB7=Y"
+    },
+    {
+      "text": "I2C CCR is set to 180 (0xB4) and TRISE to 37 for 36MHz APB1 at 100kHz standard mode",
+      "passed": true,
+      "evidence": "regex:CCR.*180|CCR.*0x[Bb]4"
+    },
+    {
+      "text": "Project includes Makefile, linker script, startup file, and at least i2c_bus and mpu6050 drivers",
+      "passed": false,
+      "evidence": "exists:Makefile=Y; exists:*.ld=Y; exists:*.s=N; exists:src/i2c_bus.c=N; exists:src/mpu6050.c=Y"
+    },
+    {
+      "text": "Phase 2: Attempts QEMU simulation with start_sim and/or GDB register verification",
+      "passed": false,
+      "evidence": "compiled but did not run QEMU simulation"
+    },
+    {
+      "text": "Code uses bare-metal register access (volatile pointers), not STM32 HAL or CMSIS",
+      "passed": true,
+      "evidence": "no_regex:#include.*stm32f1xx_hal|#include.*cmsis_os"
+    },
+    {
+      "text": "MPU6050 driver uses I2C address 0x68 or 0xD0",
+      "passed": true,
+      "evidence": "regex:0x68|0xD0"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 4,
+    "total": 8,
+    "pass_rate": 0.5
+  }
+}

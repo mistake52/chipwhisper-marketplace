@@ -1,0 +1,196 @@
+{
+  "skill_name": "stm32-firmware-dev",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "mpu6050-driver",
+      "prompt": "我用 STM32F103C8T6 核心板接了个 MPU6050 模块（VCC GND SCL SDA），I2C 地址是 0x68。帮我写一个驱动，读取加速度和角速度数据，每秒打印一次到串口。用裸机寄存器编程，不用 HAL。",
+      "expected_output": "应生成完整的裸机项目：启动文件、链接脚本、Makefile、RCC 时钟配置、I2C1 驱动、MPU6050 驱动、USART 串口驱动、main.c。引脚分配为 PB6=SCL, PB7=SDA。代码应包含 MCP 查询到的 I2C1 寄存器值和 CCR/TRISE 计算。Phase -1 先检查 STM32F103C8 在 simulation MCP 中的兼容性。",
+      "assertions": [
+        {
+          "id": "phase_minus_one_compat_check",
+          "description": "Phase -1: Check chip compatibility via list_supported_chips or discuss STM32F103 vs QEMU F100 differences",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "mcp_i2c_pin_query",
+          "description": "Phase 0: Query embedded-docs MCP for I2C1 pin mapping (PB6=SCL, PB7=SDA) and register config",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "correct_i2c_pins",
+          "description": "Generated code uses PB6 for I2C1_SCL and PB7 for I2C1_SDA",
+          "check": "file_contains:src/i2c_bus.c:PB6|file_contains:src/i2c_bus.c:PB7|file_contains:src/main.c:PB6|file_contains:src/main.c:PB7"
+        },
+        {
+          "id": "i2c_timing_registers",
+          "description": "I2C CCR is set to 180 (0xB4) and TRISE to 37 for 36MHz APB1 at 100kHz standard mode",
+          "check": "file_contains_regex:CCR.*180|CCR.*0x[Bb]4"
+        },
+        {
+          "id": "complete_project_structure",
+          "description": "Project includes Makefile, linker script, startup file, and at least i2c_bus and mpu6050 drivers",
+          "check": "file_exists:Makefile|file_exists:*.ld|file_exists:*.s|file_exists:src/i2c_bus.c|file_exists:src/mpu6050.c"
+        },
+        {
+          "id": "sim_verification_attempted",
+          "description": "Phase 2: Attempts QEMU simulation with start_sim and/or GDB register verification",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "bare_metal_no_hal",
+          "description": "Code uses bare-metal register access (volatile pointers), not STM32 HAL or CMSIS",
+          "check": "file_not_contains_regex:#include.*stm32f1xx_hal|#include.*cmsis_os"
+        },
+        {
+          "id": "mpu6050_i2c_addr",
+          "description": "MPU6050 driver uses I2C address 0x68 or 0xD0",
+          "check": "file_contains_regex:0x68|0xD0"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "eval_name": "sensor-fusion-compass",
+      "prompt": "要给 stm32f103 做一个电子罗盘：HMC5883L 磁力计 + MPU6050 六轴传感器做融合，用 Madgwick AHRS 算方位角，结果显示在 0.96 寸 SPI OLED 上。传感器在同一个 I2C 总线上，OLED 是 6 针的（SCK SDA RES DC）。先只用 QEMU 仿真验证寄存器初始化对不对，硬件还没到。",
+      "expected_output": "应生成多传感器融合项目。Phase -1 检查芯片兼容性并标注 F100/F103 差异。Phase 0 用 MCP 查 I2C1+SPI1 引脚和寄存器。Phase 1 生成完整驱动代码（i2c_bus, spi_bus, hmc5883l, mpu6050, ssd1306, sensor_fusion, calibration）。Phase 2 用 simulation MCP 验证 I2C1_CR1/SPI1_CR1 等关键寄存器。应包含 #ifdef SIMULATION 使用 HSI 8MHz 绕过 PLL 不兼容问题。",
+      "assertions": [
+        {
+          "id": "phase_minus_one_compat_check",
+          "description": "Phase -1: Reports F103 vs F100 (QEMU) difference, especially clock limit (24MHz vs 72MHz)",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "mcp_multi_peripheral_query",
+          "description": "Phase 0: Queries embedded-docs for both I2C1 and SPI1 pin mapping and register config",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "shared_i2c_bus",
+          "description": "HMC5883L (0x1E) and MPU6050 (0x68) share I2C1 bus on PB6/PB7",
+          "check": "file_contains_regex:0x1E|file_contains_regex:0x68"
+        },
+        {
+          "id": "spi_oled_pins",
+          "description": "OLED uses SPI1: PA5=SCK, PA7=MOSI, with PA4=RES and PA3=DC as GPIO outputs",
+          "check": "file_contains_regex:PA5.*SCK|SPI1_SCK|file_contains_regex:PA7.*MOSI|SPI1_MOSI"
+        },
+        {
+          "id": "madgwick_ahrs",
+          "description": "Sensor fusion uses Madgwick AHRS algorithm (not Mahony, not Kalman)",
+          "check": "file_contains_regex:Madgwick|madgwick"
+        },
+        {
+          "id": "simulation_ifdef",
+          "description": "Clock config has #ifdef SIMULATION for HSI-only mode to work with QEMU F100",
+          "check": "file_contains_regex:#ifdef SIMULATION|#ifndef SIMULATION"
+        },
+        {
+          "id": "gyro_calibration",
+          "description": "Includes gyroscope bias calibration (collect samples at startup, subtract mean)",
+          "check": "file_contains_regex:bias|calibrat|zero_drift"
+        },
+        {
+          "id": "sim_gdb_verification",
+          "description": "Phase 2: Uses start_sim + send_gdb_cmd to verify I2C1_CR1, SPI1_CR1 register values",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "complete_drivers",
+          "description": "All driver files present: hmc5883l, mpu6050, ssd1306, sensor_fusion, calibration",
+          "check": "file_exists:src/hmc5883l.c|file_exists:src/mpu6050.c|file_exists:src/ssd1306.c|file_exists:src/sensor_fusion.c|file_exists:src/calibration.c"
+        },
+        {
+          "id": "oled_no_cs_pin",
+          "description": "OLED uses software NSS (SSM=1, SSI=1) since 6-pin module has no CS pin",
+          "check": "file_contains_regex:SSM|SSI|software.*NSS"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "eval_name": "unsupported-chip-f407",
+      "prompt": "用 STM32F407VGT6 Discovery 板子驱动一个 I2C 温度传感器 LM75，把温度显示在板子自带的 LCD 上。",
+      "expected_output": "Phase -1 发现 F407 不在 embedded-docs MCP 支持范围内（只有 F103），但在 simulation MCP 中有 netduinoplus2 (F407)。应明确告知用户文档查询只能用于 F103，F407 的驱动将基于通用知识生成。仍应尝试 QEMU 仿真验证（F407 有精确 QEMU 匹配）。",
+      "assertions": [
+        {
+          "id": "report_docs_unsupported",
+          "description": "Reports that F407 is NOT supported by embedded-docs MCP (only F103 currently)",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "report_sim_supported",
+          "description": "Reports that F407 IS supported by simulation MCP (netduinoplus2 machine)",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "fallback_general_knowledge",
+          "description": "Still generates code for F407 using general knowledge, doesn't refuse the task",
+          "check": "file_exists:Makefile|file_exists:src/main.c"
+        },
+        {
+          "id": "chip_specific_registers",
+          "description": "F407 code uses correct base addresses (not F103 addresses): GPIO, RCC differ between families",
+          "check": "file_contains_regex:0x40023800|0x40020000"
+        },
+        {
+          "id": "sim_verification_attempted",
+          "description": "Attempts simulation with netduinoplus2 QEMU machine since F407 is supported",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "clear_limitation_note",
+          "description": "Adds comment in generated code noting that register values are from general knowledge, not MCP-verified",
+          "check": "file_contains_regex:MCP|knowledge base|general knowledge|reference manual|not verified"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "eval_name": "unsupported-chip-mspm0g3507",
+      "prompt": "用 MSPM0G3507 做一个简单的温控风扇：读取内部温度传感器，温度超过 30°C 就开风扇（GPIO 控制），低于 25°C 就关。用裸机寄存器编程。",
+      "expected_output": "Phase -1 双重检查：embedded_docs_list_chips 返回空（非 STM32 芯片），list_supported_chips 返回空（无 MSPM0 仿真）。应明确报告 MANUAL ONLY 象限，警告用户所有寄存器值来自通用知识，无法仿真验证。仍应尝试生成代码（通用知识兜底），并在代码中标注局限性注释。",
+      "assertions": [
+        {
+          "id": "dual_mcp_check_both_called",
+          "description": "Phase -1: Calls BOTH embedded_docs_list_chips AND list_supported_chips before generating code",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "report_manual_only_quadrant",
+          "description": "Reports MANUAL ONLY quadrant: neither docs nor simulation available for this chip",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "clear_warning_to_user",
+          "description": "Explicitly warns user: no MCP-verified registers, no QEMU simulation, code untested until hardware arrives",
+          "check": "agent_behavior"
+        },
+        {
+          "id": "still_generates_code",
+          "description": "Does NOT refuse the task — still generates code using general knowledge fallback",
+          "check": "file_exists:Makefile|file_exists:src/main.c"
+        },
+        {
+          "id": "limitation_comment_in_code",
+          "description": "Generated code contains comment noting register values from general knowledge, not MCP-verified",
+          "check": "file_contains_regex:MCP|knowledge base|general knowledge|not verified|reference manual|datasheet"
+        },
+        {
+          "id": "no_fake_stm32_registers",
+          "description": "Does NOT use STM32 peripheral addresses (0x4002xxxx) for this non-ST chip — uses correct MSPM0 or generic addresses",
+          "check": "file_not_contains_regex:0x4002[01]"
+        },
+        {
+          "id": "suggests_adding_chip_support",
+          "description": "Suggests how to add chip support to the knowledge base pipeline (SVD + QEMU machine)",
+          "check": "agent_behavior"
+        }
+      ],
+      "files": []
+    }
+  ]
+}

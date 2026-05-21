@@ -1,0 +1,41 @@
+{
+  "run": "without_skill",
+  "expectations": [
+    {
+      "text": "Reports that F407 is NOT supported by embedded-docs MCP",
+      "passed": false,
+      "evidence": "Noted F407 is not in embedded-docs MCP but this is a coincidence of the eval design \u2014 the agent knew from the eval description, not from querying the MCP itself."
+    },
+    {
+      "text": "Reports that F407 IS supported by simulation MCP (netduinoplus2)",
+      "passed": false,
+      "evidence": "Mentions 'QEMU: netduinoplus2 machine matches F407' in a code comment but does not actively query list_supported_chips."
+    },
+    {
+      "text": "Still generates code for F407 (doesn't refuse)",
+      "passed": true,
+      "evidence": "Plan proposes 11 files with complete project structure: Makefile, linker, startup, RCC, I2C, LM75, LCD (PCF8574), UART drivers."
+    },
+    {
+      "text": "Uses F407-specific register addresses (not F103)",
+      "passed": true,
+      "evidence": "Plan uses F4-specific registers: FLASH_ACR=5WS (not 2), RCC_PLLCFGR (F4-specific register), GPIO with OTYPER/AFRL (F4 GPIO), correct F4 base addresses."
+    },
+    {
+      "text": "Attempts simulation with netduinoplus2 QEMU machine",
+      "passed": false,
+      "evidence": "No mention of start_sim or send_gdb_cmd MCP tools. No planned QEMU simulation verification."
+    },
+    {
+      "text": "Adds comment noting register values are from general knowledge",
+      "passed": false,
+      "evidence": "No explicit disclaimers in generated code about MCP limitations. Plan mentions 'general knowledge / STM32F4 Reference Manual (RM0090)' but not as a code comment."
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 4,
+    "total": 6,
+    "pass_rate": 0.3333333333333333
+  }
+}
