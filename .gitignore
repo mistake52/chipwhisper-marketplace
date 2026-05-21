@@ -30,6 +30,9 @@ Thumbs.db
 # Hugging Face model cache
 models--*/
 
+# Evaluation/skill testing workspace (generated at runtime, not committed)
+**/workspace/
+
 # Build pipeline outputs (generated at runtime, not committed)
 **/data/raw/*.pdf
 **/data/parsed/*
