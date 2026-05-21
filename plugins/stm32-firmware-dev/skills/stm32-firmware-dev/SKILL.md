@@ -157,8 +157,10 @@ This is the core pattern: every piece of Phase 0 data maps to a specific HAL API
 
 ### Project Structure
 
+Create files relative to the user's current working directory, or wherever they specify. Do NOT force projects into a hardcoded parent directory.
+
 ```
-examples/<project_name>/
+<project_name>/
 ├── README.md                     # Pin assignment + wiring + build/flash instructions
 ├── Makefile                      # arm-none-eabi-gcc build with HAL_DRIVER_PATH
 ├── <chip>_flash.ld              # Linker script (Flash/RAM sizes from chip datasheet)
@@ -386,7 +388,7 @@ Only use this when the user explicitly says "不用 HAL", "bare metal", "寄存�
 ### Bare-Metal Project Structure
 
 ```
-examples/<project_name>/
+<project_name>/
 ├── README.md
 ├── Makefile
 ├── <chip>.ld                    # Linker script
