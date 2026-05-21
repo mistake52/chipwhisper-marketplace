@@ -54,7 +54,7 @@
       "id": 2,
       "eval_name": "sensor-fusion-compass",
       "prompt": "要给 stm32f103 做一个电子罗盘：HMC5883L 磁力计 + MPU6050 六轴传感器做融合，用 Madgwick AHRS 算方位角，结果显示在 0.96 寸 SPI OLED 上。传感器在同一个 I2C 总线上，OLED 是 6 针的（SCK SDA RES DC）。先只用 QEMU 仿真验证寄存器初始化对不对，硬件还没到。",
-      "expected_output": "应生成多传感器融合项目。Phase -1 检查芯片兼容性并标注 F100/F103 差异。Phase 0 用 MCP 查 I2C1+SPI1 引脚和寄存器。Phase 1 生成完整驱动代码（i2c_bus, spi_bus, hmc5883l, mpu6050, ssd1306, sensor_fusion, calibration）。Phase 2 用 simulation MCP 验证 I2C1_CR1/SPI1_CR1 等关键寄存器。应包含 #ifdef SIMULATION 使用 HSI 8MHz 绕过 PLL 不兼容问题。",
+      "expected_output": "应生成多传感器融合 HAL 项目。Phase -1 检查芯片兼容性并标注 F100/F103 差异。Phase 0 用 MCP 查 I2C1+SPI1 引脚和寄存器。Phase 1 生成完整 HAL 驱动代码（i2c_bus, spi_bus, hmc5883l, mpu6050, ssd1306, sensor_fusion, calibration），使用 __HAL_RCC_*_CLK_ENABLE() 和 HAL_*_Init()。Phase 2 用 simulation MCP 验证 I2C1_CR1/SPI1_CR1 等关键寄存器。应包含 #ifdef SIMULATION 使用 HSI 8MHz 绕过 PLL 不兼容问题。",
       "assertions": [
         {
           "id": "phase_minus_one_compat_check",
@@ -105,6 +105,11 @@
           "id": "oled_no_cs_pin",
           "description": "OLED uses software NSS (SSM=1, SSI=1) since 6-pin module has no CS pin",
           "check": "file_contains_regex:SSM|SSI|software.*NSS"
+        },
+        {
+          "id": "uses_hal_library",
+          "description": "Code uses STM32 HAL (default code style) with graph-verified clock enables and GPIO AF configs",
+          "check": "file_contains_regex:#include.*stm32f1xx_hal|file_contains_regex:__HAL_RCC_.*_CLK_ENABLE|file_contains_regex:HAL_GPIO_Init|file_contains_regex:HAL_I2C_Init"
         }
       ],
       "files": []
@@ -113,7 +118,7 @@
       "id": 3,
       "eval_name": "unsupported-chip-f407",
       "prompt": "用 STM32F407VGT6 Discovery 板子驱动一个 I2C 温度传感器 LM75，把温度显示在板子自带的 LCD 上。",
-      "expected_output": "Phase -1 发现 F407 不在 embedded-docs MCP 支持范围内（只有 F103），但在 simulation MCP 中有 netduinoplus2 (F407)。应明确告知用户文档查询只能用于 F103，F407 的驱动将基于通用知识生成。仍应尝试 QEMU 仿真验证（F407 有精确 QEMU 匹配）。",
+      "expected_output": "Phase -1 发现 F407 不在 embedded-docs MCP 支持范围内（只有 F103），但在 simulation MCP 中有 netduinoplus2 (F407)。应明确告知用户文档查询只能用于 F103，F407 的 HAL 驱动将基于通用知识生成。仍应尝试 QEMU 仿真验证（F407 有精确 QEMU 匹配）。",
       "assertions": [
         {
           "id": "report_docs_unsupported",
@@ -144,6 +149,11 @@
           "id": "clear_limitation_note",
           "description": "Adds comment in generated code noting that register values are from general knowledge, not MCP-verified",
           "check": "file_contains_regex:MCP|knowledge base|general knowledge|reference manual|not verified"
+        },
+        {
+          "id": "uses_hal_library",
+          "description": "Code uses STM32F4 HAL (default code style) since user did not request bare-metal",
+          "check": "file_contains_regex:#include.*stm32f4xx_hal|file_contains_regex:__HAL_RCC_.*_CLK_ENABLE|file_contains_regex:HAL_GPIO_Init|file_contains_regex:HAL_I2C_Init"
         }
       ],
       "files": []
