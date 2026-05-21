@@ -1,0 +1,109 @@
+{
+  "STM32F103C8": {
+    "series": "STM32F1",
+    "node_prefix": "F103",
+    "svd": "STM32F103xx.svd",
+    "graph": "f1_knowledge_graph.json",
+    "chunks": "chunks_rm0008.json",
+    "qdrant_collection": "stm32f1_docs",
+
+    "chip_spec": {
+      "id": "STM32F103C8",
+      "name": "STM32F103C8",
+      "flash_kb": 64,
+      "ram_kb": 20,
+      "package": "LQFP48",
+      "max_mhz": 72,
+      "revision": "Rev X"
+    },
+
+    "reference_manual": {
+      "doc_id": "en.CD00171190",
+      "source": "RM0008",
+      "revision": "Rev 21",
+      "download_url": "https://www.st.com/resource/en/reference_manual/rm0008-stm32f101xx-stm32f102xx-stm32f103xx-stm32f105xx-and-stm32f107xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf",
+      "strip_patterns": [
+        "^RM0008\\s*$",
+        "^RM0008 Rev \\d+\\s*$",
+        "^Doc ID \\d+ Rev \\d+\\s*$",
+        "^\\d+/\\d+\\s*$"
+      ],
+      "chapter_to_peripheral": {
+        "27.6": "USART1",
+        "27":   "USART1",
+        "7.3":  "RCC",
+        "7":    "RCC",
+        "8.3":  "RCC",
+        "9.2":  "GPIO",
+        "9.1":  "GPIO",
+        "9":    "GPIO",
+        "15.4": "TIM2",
+        "15":   "TIM2",
+        "25.5": "SPI1",
+        "25":   "SPI1",
+        "26.6": "I2C1",
+        "26":   "I2C1",
+        "11.12": "ADC1",
+        "11":   "ADC1",
+        "13.4": "DMA1",
+        "13":   "DMA1",
+        "3.3":  "FLASH",
+        "3":    "FLASH",
+        "10.1": "NVIC",
+        "10":   "NVIC"
+      }
+    },
+
+    "datasheet": {
+      "download_url": "https://www.st.com/resource/en/datasheet/stm32f103c8.pdf"
+    },
+
+    "errata": {
+      "file": "es0005_items.json",
+      "download_url": "https://www.st.com/resource/en/errata_sheet/es0005-stm32f100xx-stm32f101xx-stm32f102xx-stm32f103xx-stm32f105xx-and-stm32f107xx-device-errata-stmicroelectronics.pdf"
+    },
+
+    "pin_mapping": "stm32f103c8_lqfp48.json",
+
+    "peripheral_whitelist": [
+      "RCC", "GPIO",
+      "USART1", "USART2",
+      "SPI1", "I2C1",
+      "TIM2", "ADC1", "DMA1",
+      "FLASH", "NVIC"
+    ],
+
+    "prefix_patterns": ["GPIO"],
+
+    "bus_map": {
+      "APB1": ["TIM2", "USART2", "SPI2", "I2C1", "I2C2"],
+      "APB2": ["USART1", "SPI1", "ADC1", "ADC2", "ADC3",
+               "GPIOA", "GPIOB", "GPIOC", "GPIOD", "GPIOE",
+               "GPIOF", "GPIOG", "AFIO"],
+      "AHB": ["DMA1", "DMA2", "FLASH", "RCC", "CRC", "FSMC", "SDIO"]
+    },
+
+    "clock_enable_map": {
+      "GPIOA":  ["APB2", "RCC_APB2ENR", 2,  "0x40021018"],
+      "GPIOB":  ["APB2", "RCC_APB2ENR", 3,  "0x40021018"],
+      "GPIOC":  ["APB2", "RCC_APB2ENR", 4,  "0x40021018"],
+      "GPIOD":  ["APB2", "RCC_APB2ENR", 5,  "0x40021018"],
+      "GPIOE":  ["APB2", "RCC_APB2ENR", 6,  "0x40021018"],
+      "GPIOF":  ["APB2", "RCC_APB2ENR", 7,  "0x40021018"],
+      "GPIOG":  ["APB2", "RCC_APB2ENR", 8,  "0x40021018"],
+      "ADC1":   ["APB2", "RCC_APB2ENR", 9,  "0x40021018"],
+      "SPI1":   ["APB2", "RCC_APB2ENR", 12, "0x40021018"],
+      "USART1": ["APB2", "RCC_APB2ENR", 14, "0x40021018"],
+      "TIM2":   ["APB1", "RCC_APB1ENR", 0,  "0x4002101C"],
+      "USART2": ["APB1", "RCC_APB1ENR", 17, "0x4002101C"],
+      "I2C1":   ["APB1", "RCC_APB1ENR", 21, "0x4002101C"],
+      "DMA1":   ["AHB",  "RCC_AHBENR",  0,  "0x40021014"],
+      "FLASH":  ["AHB",  "RCC_AHBENR",  4,  "0x40021014"]
+    },
+
+    "traversal_peripheral_names": [
+      "RCC", "GPIOA", "GPIOB", "GPIOC", "GPIOD", "GPIOE", "GPIOF", "GPIOG",
+      "USART1", "USART2", "SPI1", "I2C1", "TIM2", "ADC1", "DMA1", "FLASH", "NVIC"
+    ]
+  }
+}

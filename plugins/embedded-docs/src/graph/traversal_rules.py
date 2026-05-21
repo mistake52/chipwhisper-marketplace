@@ -2,6 +2,7 @@
 
 Provides entity extraction from query text and BFS traversal with
 intent-specific edge type allowlists to prevent depth explosion.
+Accepts chip_config for multi-chip support.
 """
 
 import re
@@ -16,11 +17,6 @@ TRAVERSAL_RULES: dict[str, list[str]] = {
     "pin_mapping": ["LOCATED_AT_PIN", "HAS_REGISTER", "DESCRIBED_IN"],
     "clock_tree": ["REQUIRES_CLOCK", "DEPENDS_ON", "HAS_REGISTER", "DESCRIBED_IN"],
 }
-
-_PERIPHERAL_NAMES = [
-    "RCC", "GPIOA", "GPIOB", "GPIOC", "GPIOD", "GPIOE", "GPIOF", "GPIOG",
-    "USART1", "USART2", "SPI1", "I2C1", "TIM2", "ADC1", "DMA1", "FLASH", "NVIC",
-]
 
 _REGISTER_PATTERN = re.compile(r"\b([A-Z][A-Z0-9]{1,}(?:_[A-Z][A-Z0-9]+)+)\b")
 _ADDR_PATTERN = re.compile(r"(0x[0-9A-Fa-f]{8})")
@@ -73,11 +69,24 @@ def _expand_clock_registers(graph: nx.DiGraph, node_ids: list[str]) -> list[str]
 _PORT_NORMALIZE = re.compile(r"\bport\s+([A-G])\b", re.IGNORECASE)
 
 
-def extract_query_entities(query: str, graph: nx.DiGraph) -> list[str]:
+def extract_query_entities(query: str, graph: nx.DiGraph,
+                          chip_config: dict | None = None) -> list[str]:
     """Extract peripheral names and register names from a query, resolve to graph node IDs.
+
+    Args:
+        query: Natural language query string.
+        graph: NetworkX DiGraph loaded from knowledge graph JSON.
+        chip_config: Optional chip config dict. Uses traversal_peripheral_names
+                     and node_prefix. Falls back to F103_ if omitted.
 
     Returns a list of node IDs in the graph that match entities in the query.
     """
+    cfg = chip_config or {}
+    periph_names = cfg.get("traversal_peripheral_names",
+        ["RCC", "GPIOA", "GPIOB", "GPIOC", "GPIOD", "GPIOE", "GPIOF", "GPIOG",
+         "USART1", "USART2", "SPI1", "I2C1", "TIM2", "ADC1", "DMA1", "FLASH", "NVIC"])
+    prefix = cfg.get("node_prefix", "F103")
+
     # Normalize "port X" -> "GPIOX" before matching
     query = _PORT_NORMALIZE.sub(r"GPIO\1", query)
 
@@ -89,22 +98,21 @@ def extract_query_entities(query: str, graph: nx.DiGraph) -> list[str]:
     gpio_matched_specific = False
 
     # Match peripheral names
-    for pname in _PERIPHERAL_NAMES:
+    for pname in periph_names:
         if pname in query_upper:
             if pname.startswith("GPIO") and len(pname) == 5:
                 gpio_matched_specific = True
-            pid = f"F103_{pname}"
+            pid = f"{prefix}_{pname}"
             if pid in graph_nodes:
                 node_ids.append(pid)
 
     # GPIO generic match: expand to all GPIO ports if no specific port named
     if "GPIO" in query_upper and not gpio_matched_specific:
-        for port_letter in "ABCDEFG":
+        for port_letter in "ABCDEFGHI":
             pname = f"GPIO{port_letter}"
-            if pname not in query_upper:
-                pid = f"F103_{pname}"
-                if pid in graph_nodes and pid not in node_ids:
-                    node_ids.append(pid)
+            pid = f"{prefix}_{pname}"
+            if pid in graph_nodes and pid not in node_ids:
+                node_ids.append(pid)
 
     # Match register names (UPPERCASE_WITH_UNDERSCORES)
     for m in _REGISTER_PATTERN.finditer(query):
@@ -190,7 +198,7 @@ def extract_query_entities(query: str, graph: nx.DiGraph) -> list[str]:
         }
         for kw, pname in _KV_PERIPHERAL.items():
             if kw in query_upper:
-                pid = f"F103_{pname}"
+                pid = f"{prefix}_{pname}"
                 if pid in graph_nodes and pid not in node_ids:
                     node_ids.append(pid)
 

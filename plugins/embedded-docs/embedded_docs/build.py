@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""CLI and MCP tool handlers for building the STM32F1 knowledge base.
+"""CLI and MCP tool handlers for building STM32 knowledge bases.
+
+All functions accept a chip_model parameter (e.g. "STM32F103C8") and derive
+paths, URLs, and config from data/chips.json via chip_registry.
 
 Subcommands:
-    download    Download PDFs from ST.com (SVD is bundled)
+    download    Download PDFs from ST.com
     parse       Parse PDFs into structured Markdown
     build-graph Build knowledge graph from SVD + parsed markdown
     index       Embed chunks and upload to Qdrant
@@ -27,46 +30,57 @@ def get_plugin_root() -> Path:
 
 PLUGIN_ROOT = get_plugin_root()
 DATA_DIR = PLUGIN_ROOT / "data"
-RAW_DIR = DATA_DIR / "raw"
-SVD_DIR = DATA_DIR / "svd"
-PARSED_DIR = DATA_DIR / "parsed"
-GRAPH_DIR = DATA_DIR / "graph"
-
-SVD_PATH = SVD_DIR / "STM32F103xx.svd"
-RM0008_MD = PARSED_DIR / "en.CD00171190" / "en.CD00171190.md"
-RM0008_SECTIONS = PARSED_DIR / "en.CD00171190" / "en.CD00171190_sections.json"
-GRAPH_OUTPUT = GRAPH_DIR / "f1_knowledge_graph.json"
-CHUNKS_OUTPUT = GRAPH_DIR / "chunks_rm0008.json"
-REPORT_OUTPUT = GRAPH_DIR / "association_report.md"
-
-DOWNLOAD_URLS = {
-    "en.CD00171190.pdf": (
-        "https://www.st.com/resource/en/reference_manual/"
-        "rm0008-stm32f101xx-stm32f102xx-stm32f103xx-stm32f105xx-and-"
-        "stm32f107xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf"
-    ),
-    "stm32f103c8.pdf": (
-        "https://www.st.com/resource/en/datasheet/stm32f103c8.pdf"
-    ),
-    "ES0005_Errata.pdf": (
-        "https://www.st.com/resource/en/errata_sheet/"
-        "es0005-stm32f100xx-stm32f101xx-stm32f102xx-stm32f103xx-"
-        "stm32f105xx-and-stm32f107xx-device-errata-stmicroelectronics.pdf"
-    ),
-}
 
 
-def download_docs(force: bool = False) -> dict:
-    """Download STM32F1 reference PDFs from ST.com. SVD is bundled."""
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
+def _get_config(chip_model: str) -> dict:
+    from embedded_docs.chip_registry import get_chip_config
+    return get_chip_config(chip_model, data_dir=DATA_DIR)
+
+
+def _resolve_paths(chip_model: str):
+    """Resolve all data paths for a given chip model."""
+    cfg = _get_config(chip_model)
+    rm = cfg.get("reference_manual", {})
+    doc_id = rm.get("doc_id", "en.CD00171190")
+
+    return {
+        "svd": DATA_DIR / "svd" / cfg["svd"],
+        "rm_md": DATA_DIR / "parsed" / doc_id / f"{doc_id}.md",
+        "rm_sections": DATA_DIR / "parsed" / doc_id / f"{doc_id}_sections.json",
+        "graph": DATA_DIR / "graph" / cfg["graph"],
+        "chunks": DATA_DIR / "graph" / cfg.get("chunks", "chunks_rm0008.json"),
+        "report": DATA_DIR / "graph" / "association_report.md",
+        "collection": cfg.get("qdrant_collection", "stm32f1_docs"),
+    }
+
+
+def download_docs(chip_model: str = "STM32F103C8", force: bool = False) -> dict:
+    """Download reference PDFs from ST.com for the given chip."""
+    cfg = _get_config(chip_model)
+    raw_dir = DATA_DIR / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    urls = {}
+    rm = cfg.get("reference_manual", {})
+    if rm.get("download_url"):
+        urls[f"{rm['doc_id']}.pdf"] = rm["download_url"]
+    ds = cfg.get("datasheet", {})
+    if ds.get("download_url"):
+        filename = os.path.basename(ds["download_url"])
+        urls[filename] = ds["download_url"]
+    err = cfg.get("errata", {})
+    if err.get("download_url"):
+        filename = err.get("file", os.path.basename(err["download_url"]))
+        if not filename.endswith(".pdf"):
+            filename = f"{filename}.pdf"
+        urls[filename] = err["download_url"]
+
     results = {}
-
-    for filename, url in DOWNLOAD_URLS.items():
-        dest = RAW_DIR / filename
+    for filename, url in urls.items():
+        dest = raw_dir / filename
         if dest.exists() and not force:
             results[filename] = "skipped (exists)"
             continue
-
         try:
             subprocess.run(
                 ["wget", "-q", "--show-progress",
@@ -83,20 +97,22 @@ def download_docs(force: bool = False) -> dict:
     return {"ok": True, "status": "download complete", "files": results}
 
 
-def parse_pdfs(force: bool = False) -> dict:
+def parse_pdfs(chip_model: str = "STM32F103C8", force: bool = False) -> dict:
     """Parse all PDFs in data/raw/ into structured Markdown using pymupdf."""
     import fitz
 
-    pdfs = sorted(RAW_DIR.glob("*.pdf"))
+    raw_dir = DATA_DIR / "raw"
+    pdfs = sorted(raw_dir.glob("*.pdf"))
     if not pdfs:
         return {"ok": True, "status": "no PDFs found", "parsed": []}
 
-    PARSED_DIR.mkdir(parents=True, exist_ok=True)
+    parsed_dir = DATA_DIR / "parsed"
+    parsed_dir.mkdir(parents=True, exist_ok=True)
     results = []
 
     for pdf_path in pdfs:
         pdf_name = pdf_path.stem
-        out_subdir = PARSED_DIR / pdf_name
+        out_subdir = parsed_dir / pdf_name
         md_path = out_subdir / f"{pdf_name}.md"
         sections_path = out_subdir / f"{pdf_name}_sections.json"
 
@@ -144,15 +160,18 @@ def parse_pdfs(force: bool = False) -> dict:
     return {"ok": True, "status": "parse complete", "parsed": results}
 
 
-def build_graph(force: bool = False) -> dict:
-    """Build knowledge graph from SVD + parsed RM0008 markdown."""
-    if not force and GRAPH_OUTPUT.exists():
+def build_graph(chip_model: str = "STM32F103C8", force: bool = False) -> dict:
+    """Build knowledge graph from SVD + parsed markdown for the given chip."""
+    paths = _resolve_paths(chip_model)
+    cfg = _get_config(chip_model)
+
+    if not force and paths["graph"].exists():
         return {"ok": True, "status": "skipped (graph exists)"}
 
-    if not SVD_PATH.exists():
-        return {"ok": False, "error": f"SVD file not found: {SVD_PATH}"}
-    if not RM0008_MD.exists():
-        return {"ok": False, "error": f"RM0008 markdown not found: {RM0008_MD}. Run parse step first."}
+    if not paths["svd"].exists():
+        return {"ok": False, "error": f"SVD file not found: {paths['svd']}"}
+    if not paths["rm_md"].exists():
+        return {"ok": False, "error": f"Markdown not found: {paths['rm_md']}. Run parse step first."}
 
     sys.path.insert(0, str(PLUGIN_ROOT))
     import networkx as nx
@@ -162,30 +181,30 @@ def build_graph(force: bool = False) -> dict:
     steps = {}
 
     t0 = time.time()
-    svd = SVDParser(str(SVD_PATH))
+    svd = SVDParser(str(paths["svd"]), chip_config=cfg)
     graph_data = svd.to_graph_format()
     steps["svd"] = f"{len(graph_data['nodes'])} nodes, {len(graph_data['edges'])} edges ({time.time() - t0:.1f}s)"
 
     t0 = time.time()
-    builder = GraphBuilder(graph_data)
+    builder = GraphBuilder(graph_data, chip_config=cfg)
     g = builder.build()
     steps["graph"] = f"{g.number_of_nodes()} nodes, {g.number_of_edges()} edges ({time.time() - t0:.1f}s)"
 
     t0 = time.time()
     audit = builder.audit()
-    builder.save(GRAPH_OUTPUT)
-    steps["audit"] = f"saved {GRAPH_OUTPUT.stat().st_size / 1024:.0f} KB, types: {audit['node_types']}"
+    builder.save(str(paths["graph"]))
+    steps["audit"] = f"saved {paths['graph'].stat().st_size / 1024:.0f} KB, types: {audit['node_types']}"
 
     t0 = time.time()
     from src.parser.doc_chunker import DocChunker
-    chunker = DocChunker(str(RM0008_MD), str(RM0008_SECTIONS))
+    chunker = DocChunker(str(paths["rm_md"]), str(paths["rm_sections"]), chip_config=cfg)
     chunks = chunker.chunk_all()
     chunk_nodes = chunker.to_graph_nodes(chunks)
     reg_defs = sum(1 for c in chunks if c.is_register_definition)
     steps["chunk"] = f"{len(chunk_nodes)} chunks, {reg_defs} register defs ({time.time() - t0:.1f}s)"
 
-    CHUNKS_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    CHUNKS_OUTPUT.write_text(json.dumps(chunk_nodes, indent=2, ensure_ascii=False), encoding="utf-8")
+    paths["chunks"].parent.mkdir(parents=True, exist_ok=True)
+    paths["chunks"].write_text(json.dumps(chunk_nodes, indent=2, ensure_ascii=False), encoding="utf-8")
 
     t0 = time.time()
     from src.parser.doc_associator import DocAssociator
@@ -209,30 +228,33 @@ def build_graph(force: bool = False) -> dict:
                    **{k: v for k, v in edge.items() if k not in ("source", "target")})
 
     data = nx.node_link_data(g, edges="links")
-    GRAPH_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    GRAPH_OUTPUT.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-    steps["merge"] = f"{g.number_of_nodes()} nodes, {g.number_of_edges()} edges, {GRAPH_OUTPUT.stat().st_size / 1024:.0f} KB ({time.time() - t0:.1f}s)"
+    paths["graph"].parent.mkdir(parents=True, exist_ok=True)
+    paths["graph"].write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    steps["merge"] = f"{g.number_of_nodes()} nodes, {g.number_of_edges()} edges, {paths['graph'].stat().st_size / 1024:.0f} KB ({time.time() - t0:.1f}s)"
 
     report_md_lines = [
-        "# M2 Document Association Report", "",
+        "# Document Association Report", "",
         "## Summary",
         f"- L1 definition anchors: **{report['l1_anchor_count']}**",
         f"- L2 usage associations: **{report['l2_association_count']}**",
     ]
-    REPORT_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_OUTPUT.write_text("\n".join(report_md_lines), encoding="utf-8")
+    paths["report"].parent.mkdir(parents=True, exist_ok=True)
+    paths["report"].write_text("\n".join(report_md_lines), encoding="utf-8")
 
     return {"ok": True, "status": "graph built", "steps": steps}
 
 
-def index_chunks(force: bool = False) -> dict:
-    """Embed document chunks and upload to Qdrant."""
+def index_chunks(chip_model: str = "STM32F103C8", force: bool = False) -> dict:
+    """Embed document chunks and upload to Qdrant for the given chip."""
     from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, VectorParams, PointStruct
     from sentence_transformers import SentenceTransformer
 
-    if not CHUNKS_OUTPUT.exists():
-        return {"ok": False, "error": f"Chunks not found: {CHUNKS_OUTPUT}. Run build-graph first."}
+    paths = _resolve_paths(chip_model)
+    collection_name = paths["collection"]
+
+    if not paths["chunks"].exists():
+        return {"ok": False, "error": f"Chunks not found: {paths['chunks']}. Run build-graph first."}
 
     try:
         client = QdrantClient(host="localhost", port=6333)
@@ -240,8 +262,7 @@ def index_chunks(force: bool = False) -> dict:
     except Exception as e:
         return {"ok": False, "error": f"Qdrant not reachable at localhost:6333: {e}"}
 
-    chunks = json.loads(CHUNKS_OUTPUT.read_text(encoding="utf-8"))
-    collection_name = "stm32f1_docs"
+    chunks = json.loads(paths["chunks"].read_text(encoding="utf-8"))
 
     if not force and client.collection_exists(collection_name):
         info = client.get_collection(collection_name)
@@ -277,15 +298,17 @@ def index_chunks(force: bool = False) -> dict:
             "time_s": round(time.time() - t0, 1), "collection": info.points_count}
 
 
-def run_all(skip_download: bool = False, skip_index: bool = False, force: bool = False) -> list[dict]:
+def run_all(chip_model: str = "STM32F103C8", *,
+            skip_download: bool = False, skip_index: bool = False,
+            force: bool = False) -> list[dict]:
     """Run full pipeline and return list of step results."""
     results = []
     if not skip_download:
-        results.append({"step": "download", **download_docs(force=force)})
-    results.append({"step": "parse", **parse_pdfs(force=force)})
-    results.append({"step": "build-graph", **build_graph(force=force)})
+        results.append({"step": "download", **download_docs(chip_model, force=force)})
+    results.append({"step": "parse", **parse_pdfs(chip_model, force=force)})
+    results.append({"step": "build-graph", **build_graph(chip_model, force=force)})
     if not skip_index:
-        results.append({"step": "index", **index_chunks(force=force)})
+        results.append({"step": "index", **index_chunks(chip_model, force=force)})
     return results
 
 
@@ -309,7 +332,8 @@ def _toc_to_sections(toc: list) -> list[dict]:
 # ---- CLI ----
 
 def main():
-    parser = argparse.ArgumentParser(description="Build STM32F1 knowledge base for embedded-docs")
+    parser = argparse.ArgumentParser(description="Build STM32 knowledge base for embedded-docs")
+    parser.add_argument("--chip", default="STM32F103C8", help="Chip model (default: STM32F103C8)")
     parser.add_argument("--force", action="store_true", help="Overwrite existing outputs")
     sub = parser.add_subparsers(dest="command")
 
@@ -324,15 +348,16 @@ def main():
     args = parser.parse_args()
 
     if args.command == "download":
-        result = download_docs(force=args.force)
+        result = download_docs(chip_model=args.chip, force=args.force)
     elif args.command == "parse":
-        result = parse_pdfs(force=args.force)
+        result = parse_pdfs(chip_model=args.chip, force=args.force)
     elif args.command == "build-graph":
-        result = build_graph(force=args.force)
+        result = build_graph(chip_model=args.chip, force=args.force)
     elif args.command == "index":
-        result = index_chunks(force=args.force)
+        result = index_chunks(chip_model=args.chip, force=args.force)
     elif args.command == "all":
-        results = run_all(skip_download=args.skip_download, skip_index=args.skip_index, force=args.force)
+        results = run_all(chip_model=args.chip, skip_download=args.skip_download,
+                          skip_index=args.skip_index, force=args.force)
         for r in results:
             print(json.dumps(r, indent=2, ensure_ascii=False))
         return

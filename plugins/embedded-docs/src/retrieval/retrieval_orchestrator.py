@@ -1,7 +1,8 @@
-"""Retrieval orchestrator for STM32F1 technical queries.
+"""Retrieval orchestrator for STM32 technical queries.
 
 End-to-end pipeline: intent classification -> graph traversal -> vector search
 -> merge & rank -> token budget -> format response.
+Accepts chip_config for multi-chip support.
 """
 
 import time
@@ -21,15 +22,17 @@ from src.retrieval.token_budget import (
     format_context,
 )
 
-COLLECTION_NAME = "stm32f1_docs"
-
 
 class RetrievalOrchestrator:
-    """End-to-end retrieval pipeline for STM32F1 documentation queries."""
+    """End-to-end retrieval pipeline for STM32 documentation queries."""
 
-    def __init__(self, graph_path: str = "data/graph/f1_knowledge_graph.json"):
+    def __init__(self, graph_path: str = "data/graph/f1_knowledge_graph.json",
+                 chip_config: dict | None = None):
         self.graph = GraphBuilder.load(graph_path)
         self.qdrant = QdrantClient(host="localhost", port=6333)
+        self._cfg = chip_config or {}
+        self._collection = self._cfg.get("qdrant_collection", "stm32f1_docs")
+        self._series = self._cfg.get("series", "STM32F1")
 
     def warm_up(self):
         """Preload embedding and classification models to avoid cold-start latency."""
@@ -70,17 +73,17 @@ class RetrievalOrchestrator:
         intent = classify_intent(query, hint=intent_hint)
 
         # 2. Entity extraction + graph traversal
-        start_nodes = extract_query_entities(query, self.graph)
+        start_nodes = extract_query_entities(query, self.graph, chip_config=self._cfg)
         traversal = traverse_for_intent(self.graph, start_nodes, intent.intent_type)
 
         # 3. Vector search
         query_vec = self._embed(query)
         vector_results = self.qdrant.query_points(
-            collection_name=COLLECTION_NAME,
+            collection_name=self._collection,
             query=query_vec,
             limit=5,
             query_filter=Filter(
-                must=[FieldCondition(key="chip_series", match=MatchValue(value="STM32F1"))]
+                must=[FieldCondition(key="chip_series", match=MatchValue(value=self._series))]
             ),
         ).points
 

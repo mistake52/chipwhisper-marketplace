@@ -1,9 +1,9 @@
-"""MCP Server for STM32F1 Embedded Documentation Query.
+"""MCP Server for STM32 Embedded Documentation Query.
 
 Exposes 6 tools to Claude Code:
 - embedded_docs_query:      Main RAG query with register-level precision
-- embedded_docs_list_chips: List indexed chip models
-- embedded_docs_download:   Download STM32F1 reference PDFs from ST.com
+- embedded_docs_list_chips: List available chip models from the registry
+- embedded_docs_download:   Download reference PDFs from ST.com
 - embedded_docs_parse:      Parse PDFs into structured Markdown (pymupdf)
 - embedded_docs_build_graph: Build knowledge graph from SVD + parsed markdown
 - embedded_docs_index:      Embed chunks and upload to Qdrant
@@ -26,18 +26,24 @@ from mcp.types import Tool, TextContent
 
 from src.retrieval.retrieval_orchestrator import RetrievalOrchestrator
 from src.retrieval.intent_classifier import INTENT_TYPES
-from embedded_docs import build
+from embedded_docs import build, chip_registry
 
 app = Server("embedded-docs")
 _orchestrator = None
+_orchestrator_chip: str | None = None
+DATA_DIR = Path(plugin_root) / "data"
 
 
-def _get_orchestrator() -> RetrievalOrchestrator:
-    global _orchestrator
-    if _orchestrator is None:
-        graph_path = os.path.join(plugin_root, "data", "graph", "f1_knowledge_graph.json")
-        _orchestrator = RetrievalOrchestrator(graph_path=graph_path)
-        _orchestrator.warm_up()
+def _get_orchestrator(chip_model: str = "STM32F103C8") -> RetrievalOrchestrator:
+    global _orchestrator, _orchestrator_chip
+    if _orchestrator is not None and _orchestrator_chip == chip_model:
+        return _orchestrator
+
+    cfg = chip_registry.get_chip_config(chip_model, data_dir=DATA_DIR)
+    graph_path = DATA_DIR / "graph" / cfg["graph"]
+    _orchestrator = RetrievalOrchestrator(graph_path=str(graph_path), chip_config=cfg)
+    _orchestrator.warm_up()
+    _orchestrator_chip = chip_model
     return _orchestrator
 
 
@@ -95,7 +101,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="embedded_docs_list_chips",
-            description="List all STM32F1 chip models currently indexed in the knowledge base.",
+            description="List all chip models available in the registry (data/chips.json).",
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -104,13 +110,17 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="embedded_docs_download",
             description=(
-                "Download STM32F1 reference PDFs (RM0008, DS5319 datasheet, ES0005 errata) "
-                "from ST.com. The SVD file is already bundled in the plugin. "
+                "Download reference PDFs (reference manual, datasheet, errata) from ST.com "
+                "for the specified chip model. The SVD file is already bundled in the plugin. "
                 "Downloads are skipped if files already exist. Use force=true to re-download."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "chip_model": {
+                        "type": "string",
+                        "description": "Chip model to download docs for, e.g. 'STM32F103C8'. Defaults to STM32F103C8.",
+                    },
                     "force": {
                         "type": "boolean",
                         "description": "Re-download even if files already exist.",
@@ -122,13 +132,17 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="embedded_docs_parse",
             description=(
-                "Parse downloaded STM32F1 PDFs into structured Markdown using pymupdf. "
+                "Parse downloaded PDFs into structured Markdown using pymupdf. "
                 "Outputs go to data/parsed/<doc_id>/. Skipped if output already exists. "
                 "Use force=true to re-parse."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "chip_model": {
+                        "type": "string",
+                        "description": "Chip model to parse docs for, e.g. 'STM32F103C8'. Defaults to STM32F103C8.",
+                    },
                     "force": {
                         "type": "boolean",
                         "description": "Re-parse even if output already exists.",
@@ -140,14 +154,18 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="embedded_docs_build_graph",
             description=(
-                "Build the STM32F1 knowledge graph from SVD + parsed RM0008 markdown. "
-                "Produces f1_knowledge_graph.json, chunks_rm0008.json, and an association report. "
-                "Requires: parsed RM0008 markdown (run parse step first). "
+                "Build the knowledge graph from SVD + parsed reference manual markdown "
+                "for the specified chip model. Produces a graph JSON, chunks JSON, and "
+                "an association report. Requires: parsed markdown (run parse step first). "
                 "Skipped if graph already exists. Use force=true to rebuild."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "chip_model": {
+                        "type": "string",
+                        "description": "Chip model to build graph for, e.g. 'STM32F103C8'. Defaults to STM32F103C8.",
+                    },
                     "force": {
                         "type": "boolean",
                         "description": "Rebuild even if graph already exists.",
@@ -161,12 +179,16 @@ async def list_tools() -> list[Tool]:
             description=(
                 "Embed document chunks using all-MiniLM-L6-v2 and upload to Qdrant "
                 "for vector search. Requires: Qdrant running on localhost:6333, "
-                "chunks_rm0008.json (run build-graph step first). "
+                "chunks JSON (run build-graph step first). "
                 "Skipped if collection already has data. Use force=true to re-index."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "chip_model": {
+                        "type": "string",
+                        "description": "Chip model to index docs for, e.g. 'STM32F103C8'. Defaults to STM32F103C8.",
+                    },
                     "force": {
                         "type": "boolean",
                         "description": "Re-index even if collection already has data.",
@@ -202,24 +224,35 @@ async def call_tool(name: str, arguments: dict):
 
 
 async def handle_list_chips() -> list[TextContent]:
-    chips = [{
-        "model": "STM32F103C8",
-        "series": "STM32F1",
-        "flash_kb": 64,
-        "ram_kb": 20,
-        "max_mhz": 72,
-        "package": "LQFP48",
-    }]
+    models = chip_registry.list_chip_models(data_dir=DATA_DIR)
+    chips = []
+    for model in models:
+        try:
+            cfg = chip_registry.get_chip_config(model, data_dir=DATA_DIR)
+            spec = cfg.get("chip_spec", {})
+            chips.append({
+                "model": model,
+                "series": cfg.get("series", ""),
+                "flash_kb": spec.get("flash_kb"),
+                "ram_kb": spec.get("ram_kb"),
+                "max_mhz": spec.get("max_mhz"),
+                "package": spec.get("package"),
+            })
+        except Exception:
+            chips.append({"model": model, "series": "?"})
     return [TextContent(type="text", text=json.dumps(chips, indent=2))]
 
 
 async def handle_query(arguments: dict) -> list[TextContent]:
-    orch = _get_orchestrator()
+    chip_model = arguments.get("chip_model", "STM32F103C8")
+    orch = _get_orchestrator(chip_model)
+    cfg = chip_registry.get_chip_config(chip_model, data_dir=DATA_DIR)
+    default_rev = cfg.get("reference_manual", {}).get("revision", "Rev 21")
     try:
         result = orch.query(
             query=arguments["query"],
-            chip_model=arguments.get("chip_model", "STM32F103C8"),
-            doc_revision=arguments.get("doc_revision", "Rev 21"),
+            chip_model=chip_model,
+            doc_revision=arguments.get("doc_revision", default_rev),
             intent_hint=arguments.get("intent_hint", "auto"),
             detail_level=arguments.get("detail_level", "standard"),
             max_tokens=arguments.get("max_tokens", 2048),
@@ -235,6 +268,7 @@ async def handle_query(arguments: dict) -> list[TextContent]:
 
 async def _run_build_step(step: str, arguments: dict) -> list[TextContent]:
     """Run a build pipeline step from the build module."""
+    chip_model = arguments.get("chip_model", "STM32F103C8")
     force = arguments.get("force", False)
     step_fn = {
         "download": build.download_docs,
@@ -243,7 +277,7 @@ async def _run_build_step(step: str, arguments: dict) -> list[TextContent]:
         "index": build.index_chunks,
     }[step]
     try:
-        result = step_fn(force=force)
+        result = step_fn(chip_model=chip_model, force=force)
     except Exception as e:
         result = {"ok": False, "error": str(e)}
     return [TextContent(type="text", text=json.dumps(result, indent=2, ensure_ascii=False))]

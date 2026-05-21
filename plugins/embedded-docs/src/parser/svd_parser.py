@@ -1,32 +1,15 @@
 """
-SVD Parser for STM32F1 — thin wrapper around cmsis-svd library.
+SVD Parser — thin wrapper around cmsis-svd library.
 
 Converts CMSIS-SVD parsed data into PRD-defined node/edge graph format
 (Section 4 data model) with peripheral whitelist filtering.
+Accepts chip_config dict for multi-chip support.
 """
 
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
 from cmsis_svd.parser import SVDParser as CmsisSVDParser
-
-
-# Phase 0 peripheral whitelist (case-insensitive, GPIO is prefix match)
-PERIPHERAL_WHITELIST = {
-    "RCC", "GPIO",
-    "USART1", "USART2",
-    "SPI1", "I2C1",
-    "TIM2", "ADC1", "DMA1",
-    "FLASH", "NVIC",
-}
-
-PREFIX_PATTERNS = {"GPIO"}
-
-# Bus mapping based on STM32F1 memory layout
-APB1_PERIPHERALS = {"TIM2", "USART2", "SPI2", "I2C1", "I2C2"}
-APB2_PERIPHERALS = {"USART1", "SPI1", "ADC1", "ADC2", "ADC3", "GPIOA", "GPIOB",
-                    "GPIOC", "GPIOD", "GPIOE", "GPIOF", "GPIOG", "AFIO"}
-AHB_PERIPHERALS = {"DMA1", "DMA2", "FLASH", "RCC", "CRC", "FSMC", "SDIO"}
 
 
 @dataclass
@@ -77,29 +60,31 @@ class DeviceTree:
     peripherals: list = field(default_factory=list)
 
 
-def _get_bus(periph_name: str) -> str:
-    """Determine bus domain from peripheral name (STM32F1 memory map)."""
+def _get_bus(periph_name: str, bus_map: dict) -> str:
+    """Determine bus domain from peripheral name using chip's bus map."""
     upper = periph_name.upper()
-    if any(upper == p for p in AHB_PERIPHERALS) or upper.startswith("DMA"):
-        return "AHB"
-    for p in APB1_PERIPHERALS:
+    # Try AHB first (it's the broadest — includes DMA, FLASH, RCC, FSMC, etc.)
+    for p in bus_map.get("AHB", []):
+        if upper == p or upper.startswith(p):
+            return "AHB"
+    for p in bus_map.get("APB1", []):
         if upper == p or upper.startswith(p):
             return "APB1"
-    for p in APB2_PERIPHERALS:
+    for p in bus_map.get("APB2", []):
         if upper == p:
             return "APB2"
-    if upper.startswith("GPIO") or upper == "AFIO":
+    if upper.startswith("GPIO"):
         return "APB2"
     return "APB1"
 
 
-def _is_whitelisted(name: str) -> bool:
-    """Check if peripheral name matches Phase 0 whitelist (case-insensitive)."""
+def _is_whitelisted(name: str, whitelist: set, prefix_patterns: set) -> bool:
+    """Check if peripheral name matches whitelist (case-insensitive)."""
     upper = name.upper()
-    for pattern in PREFIX_PATTERNS:
+    for pattern in prefix_patterns:
         if upper.startswith(pattern):
             return True
-    return upper in PERIPHERAL_WHITELIST
+    return upper in whitelist
 
 
 def _access_to_str(access) -> str:
@@ -118,10 +103,11 @@ def _access_to_str(access) -> str:
 
 
 class SVDParser:
-    """Parse STM32F1 SVD file and produce PRD-compliant graph data."""
+    """Parse STM32 SVD file and produce PRD-compliant graph data."""
 
-    def __init__(self, svd_path: str):
+    def __init__(self, svd_path: str, chip_config: dict | None = None):
         self.svd_path = svd_path
+        self._cfg = chip_config or {}
         self._cmsis_parser = CmsisSVDParser.for_xml_file(svd_path)
         self._device = self._cmsis_parser.get_device()
         self._parsed_peripherals: list[PeripheralNode] = []
@@ -142,8 +128,10 @@ class SVDParser:
             vendor=self.vendor,
         )
 
+        whitelist = set(self._cfg.get("peripheral_whitelist", []))
+        prefix_patterns = set(self._cfg.get("prefix_patterns", []))
         for cmsis_periph in self._device.peripherals:
-            if not _is_whitelisted(cmsis_periph.name):
+            if not _is_whitelisted(cmsis_periph.name, whitelist, prefix_patterns):
                 continue
 
             periph = self._parse_peripheral(cmsis_periph)
@@ -161,7 +149,7 @@ class SVDParser:
 
     def _parse_peripheral(self, cmsis_periph) -> PeripheralNode:
         base_addr = f"0x{cmsis_periph.base_address:08X}"
-        bus = _get_bus(cmsis_periph.name)
+        bus = _get_bus(cmsis_periph.name, self._cfg.get("bus_map", {}))
 
         registers = []
         for cmsis_reg in cmsis_periph.registers:
@@ -221,8 +209,12 @@ class SVDParser:
         nodes = []
         edges = []
 
+        prefix = self._cfg.get("node_prefix", "F103")
+        chip_id = self._cfg.get("chip_spec", {}).get("id",
+                   self._cfg.get("chip_spec", {}).get("name", "UNKNOWN"))
+
         for periph in self._parsed_peripherals:
-            pid = f"F103_{periph.name}"
+            pid = f"{prefix}_{periph.name}"
 
             # Peripheral node
             nodes.append({
@@ -232,7 +224,7 @@ class SVDParser:
                 "base_addr": periph.base_address,
                 "bus": periph.bus,
                 "version": "v1",
-                "chip_id": "STM32F103C8",
+                "chip_id": chip_id,
             })
 
             # Register nodes + HAS_REGISTER edges

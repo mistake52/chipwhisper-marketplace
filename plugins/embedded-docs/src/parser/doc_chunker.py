@@ -1,8 +1,9 @@
 """
-Document Chunker for parsed RM0008 markdown.
+Document Chunker for parsed reference manual markdown.
 
 Reads the parsed markdown and sections JSON, creates DocumentChunk nodes
 at register-definition granularity with peripheral hints.
+Accepts chip_config for multi-chip support.
 """
 
 import json
@@ -17,40 +18,6 @@ REGISTER_DEF_PATTERN = re.compile(
 
 # GPIOx / TIMx generic register pattern: "GPIOx_CRL" or "TIMx_CR1" etc.
 GENERIC_REG_PATTERN = re.compile(r"(\w+)x_(\w+)")
-
-# Chapter prefix -> peripheral name mapping (longest prefix wins)
-CHAPTER_TO_PERIPHERAL = {
-    "27.6": "USART1",
-    "27":   "USART1",
-    "7.3":  "RCC",
-    "7":    "RCC",
-    "8.3":  "RCC",
-    "9.2":  "GPIO",
-    "9.1":  "GPIO",
-    "9":    "GPIO",
-    "15.4": "TIM2",
-    "15":   "TIM2",
-    "25.5": "SPI1",
-    "25":   "SPI1",
-    "26.6": "I2C1",
-    "26":   "I2C1",
-    "11.12": "ADC1",
-    "11":   "ADC1",
-    "13.4": "DMA1",
-    "13":   "DMA1",
-    "3.3":  "FLASH",
-    "3":    "FLASH",
-    "10.1": "NVIC",
-    "10":   "NVIC",
-}
-
-# Headers and footers to strip from text
-STRIP_PATTERNS = [
-    re.compile(r"^RM0008\s*$", re.MULTILINE),
-    re.compile(r"^RM0008 Rev \d+\s*$", re.MULTILINE),
-    re.compile(r"^Doc ID \d+ Rev \d+\s*$", re.MULTILINE),
-    re.compile(r"^\d+/\d+\s*$", re.MULTILINE),
-]
 
 
 @dataclass
@@ -71,11 +38,18 @@ class DocumentChunkData:
 
 class DocChunker:
     def __init__(self, md_path: str | Path, sections_path: str | Path,
+                 chip_config: dict | None = None,
                  source: str = "RM0008", revision: str = "Rev 21"):
         self.md_path = Path(md_path)
         self.sections_path = Path(sections_path)
-        self.source = source
-        self.revision = revision
+        rm_cfg = (chip_config or {}).get("reference_manual", {})
+        self.source = rm_cfg.get("source", source)
+        self.revision = rm_cfg.get("revision", revision)
+        self._chapter_map = rm_cfg.get("chapter_to_peripheral", {})
+        self._chip_series = (chip_config or {}).get("series", "STM32F1")
+        # Build strip patterns from reference manual config
+        strip_pats = rm_cfg.get("strip_patterns", [])
+        self._strip_patterns = [re.compile(p, re.MULTILINE) for p in strip_pats]
         self._md_text: str | None = None
         self._sections: list[dict] | None = None
         self._header_map: dict[str, dict] | None = None
@@ -120,7 +94,7 @@ class DocChunker:
         return header_map
 
     def _clean_text(self, text: str) -> str:
-        for pat in STRIP_PATTERNS:
+        for pat in self._strip_patterns:
             text = pat.sub("", text)
         text = re.sub(r"\n{3,}", "\n\n", text)
         return text.strip()
@@ -134,7 +108,7 @@ class DocChunker:
             return None
         best = None
         best_len = 0
-        for prefix, periph in CHAPTER_TO_PERIPHERAL.items():
+        for prefix, periph in self._chapter_map.items():
             if section_num.startswith(prefix) and len(prefix) > best_len:
                 best = periph
                 best_len = len(prefix)
@@ -254,7 +228,7 @@ class DocChunker:
                 "section": c.section_number,
                 "title": c.section_title,
                 "text": c.text,
-                "chip_series": "STM32F1",
+                "chip_series": self._chip_series,
                 "linked_nodes": [],
                 "association_confidence": 0.0,
                 "association_level": "L3",

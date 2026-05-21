@@ -1,8 +1,8 @@
 """
-Graph Builder for STM32F1 knowledge graph.
+Graph Builder — builds a NetworkX knowledge graph from SVD parsed data.
 
-Takes SVDParser.to_graph_format() output, builds a NetworkX DiGraph,
-adds Chip/Clock/Pin/Errata nodes and all edge types, persists to JSON.
+Takes SVDParser.to_graph_format() output, adds Chip/Clock/Pin/Errata nodes
+and all edge types, persists to JSON. Accepts chip_config for multi-chip support.
 """
 
 import json
@@ -14,42 +14,13 @@ import networkx as nx
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
-CLOCK_ENABLE_MAP = {
-    "GPIOA":  ("APB2", "RCC_APB2ENR", 2,  "0x40021018"),
-    "GPIOB":  ("APB2", "RCC_APB2ENR", 3,  "0x40021018"),
-    "GPIOC":  ("APB2", "RCC_APB2ENR", 4,  "0x40021018"),
-    "GPIOD":  ("APB2", "RCC_APB2ENR", 5,  "0x40021018"),
-    "GPIOE":  ("APB2", "RCC_APB2ENR", 6,  "0x40021018"),
-    "GPIOF":  ("APB2", "RCC_APB2ENR", 7,  "0x40021018"),
-    "GPIOG":  ("APB2", "RCC_APB2ENR", 8,  "0x40021018"),
-    "ADC1":   ("APB2", "RCC_APB2ENR", 9,  "0x40021018"),
-    "SPI1":   ("APB2", "RCC_APB2ENR", 12, "0x40021018"),
-    "USART1": ("APB2", "RCC_APB2ENR", 14, "0x40021018"),
-    "TIM2":   ("APB1", "RCC_APB1ENR", 0,  "0x4002101C"),
-    "USART2": ("APB1", "RCC_APB1ENR", 17, "0x4002101C"),
-    "I2C1":   ("APB1", "RCC_APB1ENR", 21, "0x4002101C"),
-    "DMA1":   ("AHB",  "RCC_AHBENR",  0,  "0x40021014"),
-    "FLASH":  ("AHB",  "RCC_AHBENR",  4,  "0x40021014"),
-}
-
-CHIP_SPEC = {
-    "id": "STM32F103C8",
-    "type": "Chip",
-    "name": "STM32F103C8",
-    "series": "STM32F1",
-    "flash_kb": 64,
-    "ram_kb": 20,
-    "package": "LQFP48",
-    "max_mhz": 72,
-    "revision": "Rev X",
-}
-
 
 class GraphBuilder:
     """Build a NetworkX knowledge graph from SVD parsed data."""
 
-    def __init__(self, graph_data: dict):
+    def __init__(self, graph_data: dict, chip_config: dict | None = None):
         self._data = graph_data
+        self._cfg = chip_config or {}
         self._g: Optional[nx.DiGraph] = None
 
     def build(self) -> nx.DiGraph:
@@ -77,11 +48,18 @@ class GraphBuilder:
         return g
 
     def _add_chip_node(self, g: nx.DiGraph) -> None:
-        g.add_node(CHIP_SPEC["id"], **{k: v for k, v in CHIP_SPEC.items() if k != "id"})
+        spec = self._cfg.get("chip_spec", {})
+        chip_id = spec.get("id", spec.get("name", "UNKNOWN"))
+        node_data = {**spec, "type": "Chip"}
+        if "id" in node_data:
+            del node_data["id"]
+        g.add_node(chip_id, **node_data)
 
     def _add_clock_nodes(self, g: nx.DiGraph) -> None:
-        for periph_name, (domain, reg, bit, addr) in CLOCK_ENABLE_MAP.items():
-            pid = f"F103_{periph_name}"
+        clock_map = self._cfg.get("clock_enable_map", {})
+        prefix = self._cfg.get("node_prefix", "F103")
+        for periph_name, (domain, reg, bit, addr) in clock_map.items():
+            pid = f"{prefix}_{periph_name}"
             clock_id = f"{pid}_CLKEN"
             g.add_node(clock_id,
                 id=clock_id,
@@ -103,19 +81,21 @@ class GraphBuilder:
                 g.add_edge(pid, clock_id, type="REQUIRES_CLOCK", mandatory=True)
 
     def _add_pin_nodes(self, g: nx.DiGraph) -> None:
-        pin_path = PROJECT_ROOT / "data" / "pin_mapping" / "stm32f103c8_lqfp48.json"
-        if not pin_path.exists():
+        pin_file = self._cfg.get("pin_mapping", "")
+        pin_path = PROJECT_ROOT / "data" / "pin_mapping" / pin_file if pin_file else None
+        if not pin_path or not pin_path.exists():
             return
         with open(pin_path) as f:
             data = json.load(f)
 
+        prefix = self._cfg.get("node_prefix", "F103")
         for item in data.get("pins", []):
             if item.get("type") == "power" or item.get("type") == "reset" or item.get("type") == "boot":
                 continue
             port = item.get("port", "")
             if not port:
                 continue
-            pin_id = f"F103_{item['pin']}"
+            pin_id = f"{prefix}_{item['pin']}"
             g.add_node(pin_id,
                 id=pin_id,
                 type="Pin",
@@ -124,15 +104,22 @@ class GraphBuilder:
                 num=item.get("num", 0),
                 af_map={"af_default": item.get("af_default", {}),
                          "af_remap": item.get("af_remap", {})},
-                peripheral_id=f"F103_{port}",
+                peripheral_id=f"{prefix}_{port}",
             )
 
     def _add_located_at_pin_edges(self, g: nx.DiGraph) -> None:
-        pin_path = PROJECT_ROOT / "data" / "pin_mapping" / "stm32f103c8_lqfp48.json"
-        if not pin_path.exists():
+        pin_file = self._cfg.get("pin_mapping", "")
+        pin_path = PROJECT_ROOT / "data" / "pin_mapping" / pin_file if pin_file else None
+        if not pin_path or not pin_path.exists():
             return
         with open(pin_path) as f:
             data = json.load(f)
+
+        prefix = self._cfg.get("node_prefix", "F103")
+        # Derive peripheral prefixes from clock_enable_map keys
+        periph_names = set(self._cfg.get("clock_enable_map", {}).keys())
+        # Also include all peripheral names from traversal config
+        periph_names.update(self._cfg.get("traversal_peripheral_names", []))
 
         pin_nodes = {d.get("name"): n for n, d in g.nodes(data=True) if d.get("type") == "Pin"}
         for item in data.get("pins", []):
@@ -144,25 +131,23 @@ class GraphBuilder:
             all_functions.update(item.get("af_default", {}))
             all_functions.update(item.get("af_remap", {}))
             for func_name, mode in all_functions.items():
-                periph_name = func_name.split("_")[0]  # "USART1_TX" → "USART1"
-                # Map to whitelisted peripheral names
-                for prefix in ("USART1", "USART2", "SPI1", "SPI2", "SPI3",
-                               "I2C1", "I2C2", "TIM1", "TIM2", "TIM3", "TIM4",
-                               "ADC1", "DMA1"):
-                    if func_name.startswith(prefix):
-                        pid = f"F103_{prefix}"
+                for pname in sorted(periph_names, key=len, reverse=True):
+                    if func_name.startswith(pname):
+                        pid = f"{prefix}_{pname}"
                         if pid in g:
                             g.add_edge(pid, pin_id, type="LOCATED_AT_PIN",
                                       function=func_name, mode=mode)
                         break
 
     def _add_errata_nodes(self, g: nx.DiGraph) -> None:
-        errata_path = PROJECT_ROOT / "data" / "errata" / "es0005_items.json"
-        if not errata_path.exists():
+        errata_file = self._cfg.get("errata", {}).get("file", "")
+        errata_path = PROJECT_ROOT / "data" / "errata" / errata_file if errata_file else None
+        if not errata_path or not errata_path.exists():
             return
         with open(errata_path) as f:
             data = json.load(f)
 
+        prefix = self._cfg.get("node_prefix", "F103")
         for item in data.get("items", []):
             eid = item["id"]
             g.add_node(eid,
@@ -172,18 +157,20 @@ class GraphBuilder:
                 title=item["title"],
                 affected_revisions=item.get("affected_revisions", []),
                 workaround=item.get("workaround", ""),
-                peripheral_id=f"F103_{item['peripheral']}",
+                peripheral_id=f"{prefix}_{item['peripheral']}",
             )
 
     def _add_affected_by_errata_edges(self, g: nx.DiGraph) -> None:
-        errata_path = PROJECT_ROOT / "data" / "errata" / "es0005_items.json"
-        if not errata_path.exists():
+        errata_file = self._cfg.get("errata", {}).get("file", "")
+        errata_path = PROJECT_ROOT / "data" / "errata" / errata_file if errata_file else None
+        if not errata_path or not errata_path.exists():
             return
         with open(errata_path) as f:
             data = json.load(f)
 
+        prefix = self._cfg.get("node_prefix", "F103")
         for item in data.get("items", []):
-            pid = f"F103_{item['peripheral']}"
+            pid = f"{prefix}_{item['peripheral']}"
             eid = item["id"]
             if pid in g and eid in g:
                 g.add_edge(pid, eid, type="AFFECTED_BY_ERRATA",
