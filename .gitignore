@@ -19,3 +19,13 @@ Thumbs.db
 
 # Qdrant storage (large binary data, not for git)
 data/qdrant_storage/
+
+# Build artifacts (reproducible via make)
+*.o
+*.bin
+*.elf
+*.hex
+*.map
+
+# Hugging Face model cache
+models--*/
