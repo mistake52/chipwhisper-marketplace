@@ -1,0 +1,33 @@
+{
+  "_description": "Known register interaction edges for STM32F103. Manually curated from RM0008.",
+  "_note": "Source graph node IDs and edge targets use the graph node ID format (F103_PERIPHERAL_REGISTER_BITFIELD).",
+
+  "clears_by": [
+    {"source": "F103_USART1_SR_TXE",  "target": "F103_USART1_DR", "operation": "write", "note": "Writing DR clears TXE (DR now has data to transmit)"},
+    {"source": "F103_USART1_SR_RXNE", "target": "F103_USART1_DR", "operation": "read",  "note": "Reading DR clears RXNE (data has been consumed)"},
+    {"source": "F103_USART1_SR_TC",   "target": "F103_USART1_DR", "operation": "write", "note": "Writing DR after reading SR with TC=1 clears TC"},
+    {"source": "F103_USART2_SR_TXE",  "target": "F103_USART2_DR", "operation": "write", "note": "Writing DR clears TXE"},
+    {"source": "F103_USART2_SR_RXNE", "target": "F103_USART2_DR", "operation": "read",  "note": "Reading DR clears RXNE"},
+    {"source": "F103_USART2_SR_TC",   "target": "F103_USART2_DR", "operation": "write", "note": "Writing DR after reading SR with TC=1 clears TC"},
+    {"source": "F103_ADC1_SR_EOC",    "target": "F103_ADC1_DR",   "operation": "read",  "note": "Reading DR clears EOC flag"},
+    {"source": "F103_SPI1_SR_RXNE",   "target": "F103_SPI1_DR",   "operation": "read",  "note": "Reading DR clears RXNE"},
+    {"source": "F103_I2C1_SR1_ADDR",  "target": "F103_I2C1_SR2",  "operation": "read",  "note": "Reading SR1 then SR2 clears ADDR flag"},
+    {"source": "F103_TIM2_SR_UIF",    "target": "F103_TIM2_SR",   "operation": "write", "note": "Reading SR then writing 0 to UIF clears it"}
+  ],
+
+  "depends_on": [
+    {"source": "F103_RCC_APB2ENR", "target": "F103_USART1_CR1", "order": "before", "note": "Enable APB2 clock for USART1 before configuring its registers"},
+    {"source": "F103_RCC_APB2ENR", "target": "F103_GPIOA_CRL", "order": "before", "note": "Enable APB2 clock for GPIOA before configuring pins"},
+    {"source": "F103_RCC_APB2ENR", "target": "F103_GPIOA_CRH", "order": "before", "note": "Enable APB2 clock for GPIOA before configuring pins"},
+    {"source": "F103_RCC_APB2ENR", "target": "F103_SPI1_CR1",  "order": "before", "note": "Enable APB2 clock for SPI1 before configuring"},
+    {"source": "F103_RCC_APB2ENR", "target": "F103_ADC1_CR1",  "order": "before", "note": "Enable APB2 clock for ADC1 before configuring"},
+    {"source": "F103_RCC_APB1ENR", "target": "F103_TIM2_CR1",  "order": "before", "note": "Enable APB1 clock for TIM2 before configuring"},
+    {"source": "F103_RCC_APB1ENR", "target": "F103_I2C1_CR1",  "order": "before", "note": "Enable APB1 clock for I2C1 before configuring"},
+    {"source": "F103_RCC_APB1ENR", "target": "F103_USART2_CR1","order": "before", "note": "Enable APB1 clock for USART2 before configuring"},
+    {"source": "F103_RCC_AHBENR",  "target": "F103_DMA1_CCR1", "order": "before", "note": "Enable AHB clock for DMA1 before configuring"},
+    {"source": "F103_FLASH_ACR",   "target": "F103_RCC_CFGR",  "order": "before", "note": "Set Flash wait states before increasing HCLK above 24MHz (0 WS for 0-24MHz, 1 WS for 24-48MHz, 2 WS for 48-72MHz)"},
+    {"source": "F103_USART1_CR1",  "target": "F103_USART1_BRR", "order": "before", "note": "Configure USART mode and word length before setting baud rate"},
+    {"source": "F103_GPIOA_CRL",  "target": "F103_GPIOA_ODR",  "order": "before", "note": "Configure pin as output before setting output level"},
+    {"source": "F103_GPIOA_CRH",  "target": "F103_GPIOA_ODR",  "order": "before", "note": "Configure pin as output before setting output level"}
+  ]
+}

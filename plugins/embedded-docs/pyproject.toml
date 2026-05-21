@@ -13,7 +13,11 @@ dependencies = [
     "lxml>=5.0",
     "pydantic>=2.0",
     "cmsis-svd>=0.6",
+    "pymupdf>=1.24",
 ]
+
+[project.scripts]
+embedded-docs-build = "embedded_docs.build:main"
 
 [build-system]
 requires = ["hatchling"]

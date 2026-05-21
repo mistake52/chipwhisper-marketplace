@@ -1,8 +1,12 @@
 """MCP Server for STM32F1 Embedded Documentation Query.
 
-Exposes two tools to Claude Code:
-- embedded_docs_query: Main RAG query with register-level precision
+Exposes 6 tools to Claude Code:
+- embedded_docs_query:      Main RAG query with register-level precision
 - embedded_docs_list_chips: List indexed chip models
+- embedded_docs_download:   Download STM32F1 reference PDFs from ST.com
+- embedded_docs_parse:      Parse PDFs into structured Markdown (pymupdf)
+- embedded_docs_build_graph: Build knowledge graph from SVD + parsed markdown
+- embedded_docs_index:      Embed chunks and upload to Qdrant
 
 Uses stdio transport for Claude Code MCP integration.
 """
@@ -22,6 +26,7 @@ from mcp.types import Tool, TextContent
 
 from src.retrieval.retrieval_orchestrator import RetrievalOrchestrator
 from src.retrieval.intent_classifier import INTENT_TYPES
+from embedded_docs import build
 
 app = Server("embedded-docs")
 _orchestrator = None
@@ -96,6 +101,80 @@ async def list_tools() -> list[Tool]:
                 "properties": {},
             },
         ),
+        Tool(
+            name="embedded_docs_download",
+            description=(
+                "Download STM32F1 reference PDFs (RM0008, DS5319 datasheet, ES0005 errata) "
+                "from ST.com. The SVD file is already bundled in the plugin. "
+                "Downloads are skipped if files already exist. Use force=true to re-download."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "force": {
+                        "type": "boolean",
+                        "description": "Re-download even if files already exist.",
+                        "default": False,
+                    },
+                },
+            },
+        ),
+        Tool(
+            name="embedded_docs_parse",
+            description=(
+                "Parse downloaded STM32F1 PDFs into structured Markdown using pymupdf. "
+                "Outputs go to data/parsed/<doc_id>/. Skipped if output already exists. "
+                "Use force=true to re-parse."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "force": {
+                        "type": "boolean",
+                        "description": "Re-parse even if output already exists.",
+                        "default": False,
+                    },
+                },
+            },
+        ),
+        Tool(
+            name="embedded_docs_build_graph",
+            description=(
+                "Build the STM32F1 knowledge graph from SVD + parsed RM0008 markdown. "
+                "Produces f1_knowledge_graph.json, chunks_rm0008.json, and an association report. "
+                "Requires: parsed RM0008 markdown (run parse step first). "
+                "Skipped if graph already exists. Use force=true to rebuild."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "force": {
+                        "type": "boolean",
+                        "description": "Rebuild even if graph already exists.",
+                        "default": False,
+                    },
+                },
+            },
+        ),
+        Tool(
+            name="embedded_docs_index",
+            description=(
+                "Embed document chunks using all-MiniLM-L6-v2 and upload to Qdrant "
+                "for vector search. Requires: Qdrant running on localhost:6333, "
+                "chunks_rm0008.json (run build-graph step first). "
+                "Skipped if collection already has data. Use force=true to re-index."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "force": {
+                        "type": "boolean",
+                        "description": "Re-index even if collection already has data.",
+                        "default": False,
+                    },
+                },
+            },
+        ),
     ]
 
 
@@ -106,6 +185,18 @@ async def call_tool(name: str, arguments: dict):
 
     if name == "embedded_docs_query":
         return await handle_query(arguments)
+
+    if name == "embedded_docs_download":
+        return await _run_build_step("download", arguments)
+
+    if name == "embedded_docs_parse":
+        return await _run_build_step("parse", arguments)
+
+    if name == "embedded_docs_build_graph":
+        return await _run_build_step("build-graph", arguments)
+
+    if name == "embedded_docs_index":
+        return await _run_build_step("index", arguments)
 
     raise ValueError(f"Unknown tool: {name}")
 
@@ -139,6 +230,22 @@ async def handle_query(arguments: dict) -> list[TextContent]:
             text=json.dumps({"error": str(e), "answer_context": f"Retrieval error: {e}"}, indent=2),
         )]
 
+    return [TextContent(type="text", text=json.dumps(result, indent=2, ensure_ascii=False))]
+
+
+async def _run_build_step(step: str, arguments: dict) -> list[TextContent]:
+    """Run a build pipeline step from the build module."""
+    force = arguments.get("force", False)
+    step_fn = {
+        "download": build.download_docs,
+        "parse": build.parse_pdfs,
+        "build-graph": build.build_graph,
+        "index": build.index_chunks,
+    }[step]
+    try:
+        result = step_fn(force=force)
+    except Exception as e:
+        result = {"ok": False, "error": str(e)}
     return [TextContent(type="text", text=json.dumps(result, indent=2, ensure_ascii=False))]
 
 

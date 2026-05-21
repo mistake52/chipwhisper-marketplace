@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://embedded-knowledge-engine/graph-schema-v0",
+  "title": "STM32F1 Knowledge Graph Schema v0",
+  "description": "Node and edge type definitions for the STM32F1 register semantic graph (Phase 0).",
+  "definitions": {
+    "NodeType": {
+      "type": "string",
+      "enum": ["Chip", "Peripheral", "Register", "BitField", "Interrupt", "Clock", "Pin", "Errata", "DocumentChunk"]
+    },
+    "EdgeType": {
+      "type": "string",
+      "enum": [
+        "HAS_REGISTER", "HAS_BITFIELD", "REQUIRES_CLOCK",
+        "MAPS_TO_INTERRUPT", "LOCATED_AT_PIN", "AFFECTED_BY_ERRATA",
+        "CLEARS_BY", "DEPENDS_ON", "DESCRIBED_IN", "REQUIRES_VERSION"
+      ]
+    },
+    "BaseNode": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "$ref": "#/definitions/NodeType" },
+        "name": { "type": "string" }
+      }
+    },
+    "PeripheralNode": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseNode" },
+        {
+          "properties": {
+            "type": { "const": "Peripheral" },
+            "base_addr": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{8}$" },
+            "bus": { "type": "string", "enum": ["AHB", "APB1", "APB2"] },
+            "version": { "type": "string" },
+            "chip_id": { "type": "string" }
+          },
+          "required": ["base_addr", "bus"]
+        }
+      ]
+    },
+    "RegisterNode": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseNode" },
+        {
+          "properties": {
+            "type": { "const": "Register" },
+            "fullname": { "type": "string" },
+            "offset": { "type": "string", "pattern": "^0x[0-9A-Fa-f]+$" },
+            "reset_value": { "type": "string", "pattern": "^0x[0-9A-Fa-f]+$" },
+            "access": { "type": "string", "enum": ["R", "W", "RW", "R_W1C", "R_W0"] },
+            "size": { "type": "integer", "enum": [8, 16, 32] },
+            "peripheral_id": { "type": "string" }
+          },
+          "required": ["offset", "size", "access", "peripheral_id"]
+        }
+      ]
+    },
+    "BitFieldNode": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseNode" },
+        {
+          "properties": {
+            "type": { "const": "BitField" },
+            "bit_start": { "type": "integer", "minimum": 0, "maximum": 31 },
+            "bit_end": { "type": "integer", "minimum": 0, "maximum": 31 },
+            "rw": { "type": "string", "enum": ["R", "W", "RW"] },
+            "description": { "type": "string" },
+            "register_id": { "type": "string" }
+          },
+          "required": ["bit_start", "bit_end", "rw", "register_id"]
+        }
+      ]
+    },
+    "InterruptNode": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseNode" },
+        {
+          "properties": {
+            "type": { "const": "Interrupt" },
+            "irqn": { "type": "integer", "minimum": 0 },
+            "nvic_reg": { "type": "string" },
+            "nvic_bit": { "type": "integer", "minimum": 0, "maximum": 31 },
+            "peripheral_id": { "type": "string" }
+          },
+          "required": ["irqn", "peripheral_id"]
+        }
+      ]
+    },
+    "ClockNode": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseNode" },
+        {
+          "properties": {
+            "type": { "const": "Clock" },
+            "domain": { "type": "string", "enum": ["AHB", "APB1", "APB2"] },
+            "enable_reg": { "type": "string" },
+            "enable_bit": { "type": "integer", "minimum": 0, "maximum": 31 },
+            "enable_reg_addr": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{8}$" },
+            "peripheral_id": { "type": "string" }
+          },
+          "required": ["domain", "enable_reg", "enable_bit", "peripheral_id"]
+        }
+      ]
+    },
+    "PinNode": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseNode" },
+        {
+          "properties": {
+            "type": { "const": "Pin" },
+            "port": { "type": "string", "pattern": "^GPIO[A-Z]$" },
+            "num": { "type": "integer", "minimum": 0, "maximum": 15 },
+            "af_map": { "type": "object" },
+            "peripheral_id": { "type": "string" }
+          },
+          "required": ["port", "num", "peripheral_id"]
+        }
+      ]
+    },
+    "ErrataNode": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseNode" },
+        {
+          "properties": {
+            "type": { "const": "Errata" },
+            "title": { "type": "string" },
+            "affected_revisions": { "type": "array", "items": { "type": "string" } },
+            "workaround": { "type": "string" },
+            "peripheral_id": { "type": "string" }
+          },
+          "required": ["title", "peripheral_id"]
+        }
+      ]
+    },
+    "ChipNode": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseNode" },
+        {
+          "properties": {
+            "type": { "const": "Chip" },
+            "series": { "type": "string" },
+            "flash_kb": { "type": "integer" },
+            "ram_kb": { "type": "integer" },
+            "package": { "type": "string" },
+            "max_mhz": { "type": "integer" },
+            "revision": { "type": "string" }
+          },
+          "required": ["series", "flash_kb", "ram_kb", "max_mhz"]
+        }
+      ]
+    },
+    "DocumentChunkNode": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseNode" },
+        {
+          "properties": {
+            "type": { "const": "DocumentChunk" },
+            "source": { "type": "string", "enum": ["RM0008", "DS5319", "ES0005"] },
+            "revision": { "type": "string" },
+            "page": { "type": "integer" },
+            "section": { "type": "string" },
+            "title": { "type": "string" },
+            "text": { "type": "string" },
+            "chip_series": { "type": "string" },
+            "linked_nodes": { "type": "array", "items": { "type": "string" } },
+            "association_confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+            "association_level": { "type": "string", "enum": ["L1", "L2", "L3"] }
+          },
+          "required": ["source", "revision", "page", "section", "text", "chip_series"]
+        }
+      ]
+    },
+    "BaseEdge": {
+      "type": "object",
+      "required": ["source", "target", "type"],
+      "properties": {
+        "source": { "type": "string" },
+        "target": { "type": "string" },
+        "type": { "$ref": "#/definitions/EdgeType" }
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "_description": "STM32F103C8 LQFP48 pin mapping. Source: DS5319 Rev 20, Table 5.",
+  "_note": "af_default = default alternate function after reset; af_remap = available via remap register.",
+  "pins": [
+    {"pin": "VBAT",    "type": "power"},
+    {"pin": "PC13",    "port": "GPIOC", "num": 13, "default_func": "PC13",  "af_default": {"TAMPER-RTC": "analog"}},
+    {"pin": "PC14",    "port": "GPIOC", "num": 14, "default_func": "PC14",  "af_default": {"OSC32_IN": "analog"}},
+    {"pin": "PC15",    "port": "GPIOC", "num": 15, "default_func": "PC15",  "af_default": {"OSC32_OUT": "analog"}},
+    {"pin": "OSC_IN",  "port": "GPIOD", "num": 0,  "default_func": "PD0",   "af_default": {"OSC_IN": "analog"}},
+    {"pin": "OSC_OUT", "port": "GPIOD", "num": 1,  "default_func": "PD1",   "af_default": {"OSC_OUT": "analog"}},
+    {"pin": "NRST",    "type": "reset"},
+    {"pin": "VSSA",    "type": "power"},
+    {"pin": "VDDA",    "type": "power"},
+
+    {"pin": "PA0",  "port": "GPIOA", "num": 0,  "default_func": "PA0",  "af_default": {"USART2_CTS": "input", "ADC1_IN0": "analog", "TIM2_CH1_ETR": "input"}, "af_remap": {"TIM2_CH1_ETR": "input"}},
+    {"pin": "PA1",  "port": "GPIOA", "num": 1,  "default_func": "PA1",  "af_default": {"USART2_RTS": "output", "ADC1_IN1": "analog", "TIM2_CH2": "input"}, "af_remap": {"TIM2_CH2": "input"}},
+    {"pin": "PA2",  "port": "GPIOA", "num": 2,  "default_func": "PA2",  "af_default": {"USART2_TX": "AF_PP", "ADC1_IN2": "analog", "TIM2_CH3": "output"}, "af_remap": {"TIM2_CH3": "output"}},
+    {"pin": "PA3",  "port": "GPIOA", "num": 3,  "default_func": "PA3",  "af_default": {"USART2_RX": "input", "ADC1_IN3": "analog", "TIM2_CH4": "input"}, "af_remap": {"TIM2_CH4": "input"}},
+    {"pin": "PA4",  "port": "GPIOA", "num": 4,  "default_func": "PA4",  "af_default": {"SPI1_NSS": "input", "ADC1_IN4": "analog"}, "af_remap": {"USART2_CK": "output"}},
+    {"pin": "PA5",  "port": "GPIOA", "num": 5,  "default_func": "PA5",  "af_default": {"SPI1_SCK": "output", "ADC1_IN5": "analog"}},
+    {"pin": "PA6",  "port": "GPIOA", "num": 6,  "default_func": "PA6",  "af_default": {"SPI1_MISO": "input", "ADC1_IN6": "analog"}},
+    {"pin": "PA7",  "port": "GPIOA", "num": 7,  "default_func": "PA7",  "af_default": {"SPI1_MOSI": "output", "ADC1_IN7": "analog"}},
+
+    {"pin": "PA8",  "port": "GPIOA", "num": 8,  "default_func": "PA8",  "af_default": {"USART1_CK": "output", "TIM1_CH1": "output", "MCO": "output"}},
+    {"pin": "PA9",  "port": "GPIOA", "num": 9,  "default_func": "PA9",  "af_default": {"USART1_TX": "AF_PP", "TIM1_CH2": "output"}},
+    {"pin": "PA10", "port": "GPIOA", "num": 10, "default_func": "PA10", "af_default": {"USART1_RX": "input", "TIM1_CH3": "input"}},
+    {"pin": "PA11", "port": "GPIOA", "num": 11, "default_func": "PA11", "af_default": {"USART1_CTS": "input", "TIM1_CH4": "input"}},
+    {"pin": "PA12", "port": "GPIOA", "num": 12, "default_func": "PA12", "af_default": {"USART1_RTS": "output", "TIM1_ETR": "input"}},
+    {"pin": "PA13", "port": "GPIOA", "num": 13, "default_func": "SWDIO", "af_default": {"JTMS-SWDIO": "input"}},
+    {"pin": "PA14", "port": "GPIOA", "num": 14, "default_func": "SWCLK", "af_default": {"JTCK-SWCLK": "input"}},
+    {"pin": "PA15", "port": "GPIOA", "num": 15, "default_func": "JTDI",  "af_default": {"JTDI": "input"}, "af_remap": {"SPI1_NSS": "input", "TIM2_CH1_ETR": "input"}},
+
+    {"pin": "PB0",  "port": "GPIOB", "num": 0,  "default_func": "PB0",  "af_default": {"ADC1_IN8": "analog"}, "af_remap": {"TIM3_CH3": "output"}},
+    {"pin": "PB1",  "port": "GPIOB", "num": 1,  "default_func": "PB1",  "af_default": {"ADC1_IN9": "analog"}, "af_remap": {"TIM3_CH4": "input"}},
+    {"pin": "PB2",  "port": "GPIOB", "num": 2,  "default_func": "BOOT1", "af_default": {}},
+
+    {"pin": "PB3",  "port": "GPIOB", "num": 3,  "default_func": "JTDO",  "af_default": {"JTDO": "output"}, "af_remap": {"SPI3_SCK": "output", "TIM2_CH2": "output"}},
+    {"pin": "PB4",  "port": "GPIOB", "num": 4,  "default_func": "NJTRST", "af_default": {"NJTRST": "input"}, "af_remap": {"SPI3_MISO": "input", "TIM3_CH1": "output"}},
+    {"pin": "PB5",  "port": "GPIOB", "num": 5,  "default_func": "PB5",    "af_default": {"I2C1_SMBA": "input"}, "af_remap": {"SPI3_MOSI": "output", "TIM3_CH2": "output"}},
+    {"pin": "PB6",  "port": "GPIOB", "num": 6,  "default_func": "PB6",    "af_default": {"I2C1_SCL": "AF_OD"}, "af_remap": {"TIM4_CH1": "output"}},
+    {"pin": "PB7",  "port": "GPIOB", "num": 7,  "default_func": "PB7",    "af_default": {"I2C1_SDA": "AF_OD"}, "af_remap": {"TIM4_CH2": "output"}},
+
+    {"pin": "PB8",  "port": "GPIOB", "num": 8,  "default_func": "PB8",   "af_default": {"I2C1_SCL": "AF_OD"}, "af_remap": {"TIM4_CH3": "output"}},
+    {"pin": "PB9",  "port": "GPIOB", "num": 9,  "default_func": "PB9",   "af_default": {"I2C1_SDA": "AF_OD"}, "af_remap": {"TIM4_CH4": "output"}},
+    {"pin": "PB10", "port": "GPIOB", "num": 10, "default_func": "PB10",  "af_default": {"I2C2_SCL": "AF_OD", "USART3_TX": "AF_PP"}, "af_remap": {"TIM2_CH3": "output"}},
+    {"pin": "PB11", "port": "GPIOB", "num": 11, "default_func": "PB11",  "af_default": {"I2C2_SDA": "AF_OD", "USART3_RX": "input"}, "af_remap": {"TIM2_CH4": "input"}},
+    {"pin": "PB12", "port": "GPIOB", "num": 12, "default_func": "PB12",  "af_default": {"SPI2_NSS": "input", "I2C2_SMBA": "input", "USART3_CK": "output"}, "af_remap": {"TIM1_BKIN": "input"}},
+    {"pin": "PB13", "port": "GPIOB", "num": 13, "default_func": "PB13",  "af_default": {"SPI2_SCK": "output", "USART3_CTS": "input"}, "af_remap": {"TIM1_CH1N": "output"}},
+    {"pin": "PB14", "port": "GPIOB", "num": 14, "default_func": "PB14",  "af_default": {"SPI2_MISO": "input", "USART3_RTS": "output"}, "af_remap": {"TIM1_CH2N": "output"}},
+    {"pin": "PB15", "port": "GPIOB", "num": 15, "default_func": "PB15",  "af_default": {"SPI2_MOSI": "output"}, "af_remap": {"TIM1_CH3N": "output"}},
+
+    {"pin": "BOOT0", "type": "boot"},
+    {"pin": "VSS_1", "type": "power"},
+    {"pin": "VDD_1", "type": "power"},
+    {"pin": "VSS_2", "type": "power"},
+    {"pin": "VDD_2", "type": "power"},
+    {"pin": "VSS_3", "type": "power"},
+    {"pin": "VDD_3", "type": "power"}
+  ]
+}

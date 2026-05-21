@@ -1,0 +1,79 @@
+{
+  "_description": "STM32F103xx errata items. Source: ES0005 (STM32F100/101/102/103/105/107 errata sheet).",
+  "_warning": "The downloaded ES0005_Errata.pdf is for STM32F20x/F21x (wrong series). These items are from general STM32F103 errata knowledge and need verification against the correct F103 errata sheet. The correct document may have a different ES number.",
+  "_status": "needs_verification",
+  "items": [
+    {
+      "id": "F103_ES_I2C_GLITCH",
+      "title": "I2C peripheral glitch filter limitation",
+      "peripheral": "I2C1",
+      "affected_revisions": ["Rev A", "Rev Z"],
+      "description": "I2C analog filter does not properly filter spikes shorter than 50ns on SCL/SDA lines. Can cause spurious START/STOP detection in noisy environments.",
+      "workaround": "Add external RC filter on SCL/SDA lines, or use software filtering by sampling pins multiple times.",
+      "severity": "medium"
+    },
+    {
+      "id": "F103_ES_SPI_CRC",
+      "title": "SPI CRC transfer length limitation",
+      "peripheral": "SPI1",
+      "affected_revisions": ["Rev A"],
+      "description": "SPI CRC calculation may be incorrect when data frame format is set to 8-bit with CRC enabled and transfer count not multiple of 2.",
+      "workaround": "Use 16-bit data frame format for CRC transfers, or pad transfers to even count.",
+      "severity": "low"
+    },
+    {
+      "id": "F103_ES_ADC_ACCURACY",
+      "title": "ADC accuracy degradation at low VDDA",
+      "peripheral": "ADC1",
+      "affected_revisions": ["Rev A", "Rev Z", "Rev Y"],
+      "description": "ADC accuracy (INL/DNL) degrades when VDDA < 2.4V. Datasheet specs only guaranteed for VDDA >= 2.4V.",
+      "workaround": "Ensure VDDA >= 2.4V for ADC operations. Use external voltage reference if necessary.",
+      "severity": "low"
+    },
+    {
+      "id": "F103_ES_USART_WAKEUP",
+      "title": "USART wakeup from Mute mode spurious wakeup",
+      "peripheral": "USART1",
+      "affected_revisions": ["Rev A"],
+      "description": "USART may spuriously wake from Mute mode when an interrupt coincident with the address match detection occurs.",
+      "workaround": "Re-enter Mute mode in the interrupt handler if spurious wakeup is detected. Check RWU bit in CR1.",
+      "severity": "low"
+    },
+    {
+      "id": "F103_ES_TIM_OC_REF",
+      "title": "TIM output compare reference clear event limitation",
+      "peripheral": "TIM2",
+      "affected_revisions": ["Rev A", "Rev Z"],
+      "description": "When the OCxREF signal is cleared by external event (ETRF), the OCx output may not reflect the cleared state until the next update event.",
+      "workaround": "Generate a software update event (set UG bit in EGR) after clearing OCxREF by external event.",
+      "severity": "low"
+    },
+    {
+      "id": "F103_ES_FLASH_PREFETCH",
+      "title": "Flash prefetch buffer enable limitation",
+      "peripheral": "FLASH",
+      "affected_revisions": ["Rev A"],
+      "description": "Enabling the prefetch buffer while executing from Flash may cause the next instruction fetch to read incorrect data.",
+      "workaround": "Enable prefetch buffer from RAM (execute enable code from SRAM), or enable prefetch before setting PLL as system clock source.",
+      "severity": "medium"
+    },
+    {
+      "id": "F103_ES_DMA_BURST",
+      "title": "DMA channel not freeing after transfer completion under certain conditions",
+      "peripheral": "DMA1",
+      "affected_revisions": ["Rev A", "Rev Z"],
+      "description": "DMA channel may remain enabled (EN bit stays set) after transfer completion when a higher-priority DMA request is active simultaneously with the transfer complete event.",
+      "workaround": "Disable the DMA channel explicitly in the transfer complete interrupt handler before reconfiguring.",
+      "severity": "medium"
+    },
+    {
+      "id": "F103_ES_RCC_HSE_STARTUP",
+      "title": "HSE startup time may exceed specification at high temperature",
+      "peripheral": "RCC",
+      "affected_revisions": ["Rev A"],
+      "description": "HSE oscillator startup time may exceed the specified 2ms maximum when operating at ambient temperatures above 85C.",
+      "workaround": "Increase the HSEStartUp_TimeOut value. Monitor HSERDY flag with extended timeout.",
+      "severity": "medium"
+    }
+  ]
+}

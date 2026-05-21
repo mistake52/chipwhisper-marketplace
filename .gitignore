@@ -18,7 +18,7 @@ uv.lock
 Thumbs.db
 
 # Qdrant storage (large binary data, not for git)
-data/qdrant_storage/
+**/data/qdrant_storage/
 
 # Build artifacts (reproducible via make)
 *.o
@@ -29,3 +29,9 @@ data/qdrant_storage/
 
 # Hugging Face model cache
 models--*/
+
+# Build pipeline outputs (generated at runtime, not committed)
+**/data/raw/*.pdf
+**/data/parsed/*
+!**/data/parsed/.gitkeep
+!**/data/raw/.gitkeep
