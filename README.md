@@ -2,11 +2,11 @@
 
 **STM32 bare-metal firmware development toolkit for Claude Code** — three MCP servers (documentation lookup, QEMU simulation, serial hardware debugging) plus a firmware development skill. From a natural language query to verified register values, simulated firmware, and hardware-tested code.
 
-**STM32 裸机固件开发工具集**——三个 MCP 服务器（文档查询、QEMU 仿真、串口调试）加一个固件开发 Skill。从自然语言提问到寄存器级精度的答案、仿真验证的固件、再到硬件实测——全流程覆盖。
+[中文文档 (Chinese README)](README.zh-CN.md)
 
 ---
 
-## Why ChipWhisper / 为什么用这个
+## Why ChipWhisper
 
 Writing STM32 bare-metal firmware means navigating 1000-page reference manuals, cross-referencing SVD files, and debugging register configs that silently fail. ChipWhisper lets Claude Code do the heavy lifting:
 
@@ -17,7 +17,7 @@ Writing STM32 bare-metal firmware means navigating 1000-page reference manuals, 
 
 ---
 
-## Plugins / 插件一览
+## Plugins
 
 | Plugin | Type | Description |
 |--------|------|-------------|
@@ -26,7 +26,7 @@ Writing STM32 bare-metal firmware means navigating 1000-page reference manuals, 
 | **simulation** | MCP Server | QEMU firmware simulation — start/stop, GDB commands, register/memory inspection. Supports STM32F103 and STM32F407. |
 | **stm32-firmware-dev** | Skill | Complete firmware development workflow: compatibility check → docs → code → sim → hardware test. Activates automatically on any STM32/embedded task. |
 
-## Prerequisites / 前置条件
+## Prerequisites
 
 | Plugin | Requires | Setup |
 |--------|----------|-------|
@@ -37,7 +37,7 @@ Writing STM32 bare-metal firmware means navigating 1000-page reference manuals, 
 
 Python dependencies are **auto-installed** by `uv` on first use — no manual `pip install` or `uv sync` needed.
 
-### Qdrant Setup / Qdrant 搭建
+### Qdrant Setup
 
 The `embedded-docs` plugin uses Qdrant for vector search over reference manual chunks. Start it once and leave it running:
 
@@ -51,16 +51,15 @@ docker compose -f docker/docker-compose.yml up -d
 
 # Verify it's healthy
 curl -s http://localhost:6333/healthz
-# => OK
 ```
 
-### Build the Knowledge Base / 构建知识库
+### Build the Knowledge Base
 
-Before querying a chip for the first time, you need to build its knowledge graph and index it into Qdrant. This is done via MCP tools inside Claude Code (or via CLI):
+Before querying a chip for the first time, build its knowledge graph and index it into Qdrant via MCP tools inside Claude Code (or via CLI):
 
 ```
-# Inside Claude Code — build the full pipeline for STM32F103C8
-embedded_docs_download  → downloads RM0008 + datasheet + errata PDFs
+# Inside Claude Code
+embedded_docs_download  → downloads reference manual + datasheet + errata PDFs
 embedded_docs_parse     → extracts text into structured Markdown
 embedded_docs_build_graph → builds knowledge graph from SVD + parsed docs
 embedded_docs_index     → embeds chunks and uploads to Qdrant
@@ -71,7 +70,7 @@ uv run embedded-docs-build all --chip STM32F103C8
 
 The SVD file is bundled with the plugin. PDFs are downloaded from ST.com on first run.
 
-## Install / 安装
+## Install
 
 ```bash
 # 1. Add this marketplace
@@ -90,11 +89,11 @@ claude mcp list
 # simulation     → ✓ Connected
 ```
 
-## Usage / 使用指南
+## Usage
 
 The `stm32-firmware-dev` skill activates automatically when you mention STM32, embedded peripherals, or firmware development. It follows a 5-phase workflow:
 
-### Complete Workflow / 完整工作流
+### Complete Workflow
 
 ```
 Phase -1: Compatibility Check   ── Dual MCP query (docs + sim availability)
@@ -113,7 +112,7 @@ The key differentiator is **Phase -1**: before writing any code, the skill queri
 
 This tells you exactly what can be verified vs. what relies on general knowledge — no surprises.
 
-### Scenario 1: Documentation Query / 文档查询
+### Scenario 1: Documentation Query
 
 ```
 "STM32F103 的 USART1 状态寄存器 TXE 位怎么定义的？"
@@ -123,7 +122,7 @@ This tells you exactly what can be verified vs. what relies on general knowledge
   Source: [RM0008 Rev 21, 27.6.1, P798]
 ```
 
-### Scenario 2: Firmware Development / 固件开发
+### Scenario 2: Firmware Development
 
 ```
 "Write an I2C driver for MPU6050 on STM32F103C8, using PB6 (SCL) and PB7 (SDA)"
@@ -134,7 +133,7 @@ This tells you exactly what can be verified vs. what relies on general knowledge
   optionally verifies in QEMU simulation.
 ```
 
-### Scenario 3: Hardware Debug / 硬件调试
+### Scenario 3: Hardware Debug
 
 ```
 "Connect to /dev/ttyACM0 at 115200 and capture sensor output"
@@ -142,7 +141,7 @@ This tells you exactly what can be verified vs. what relies on general knowledge
 → serial-debug opens the port, reads data, displays parsed sensor values.
 ```
 
-## Architecture / 架构
+## Architecture
 
 ### Knowledge Graph Data Flow
 
@@ -171,7 +170,7 @@ parsed Markdown      ──[doc_chunker]──▶ DocumentChunk nodes (register 
                                        + vector search → merge & rank → answer
 ```
 
-### Multi-Chip Design / 多芯片设计
+### Multi-Chip Design
 
 All chip-specific configuration lives in a single file — `data/chips.json`:
 
@@ -193,7 +192,7 @@ All chip-specific configuration lives in a single file — `data/chips.json`:
 
 Every module in the pipeline reads from this config. Adding a new chip means adding one JSON entry — zero Python changes.
 
-## Adding a New Chip / 添加新芯片
+## Adding a New Chip
 
 ```bash
 # 1. Add an entry to data/chips.json with the chip's SVD, reference manual URL,
@@ -216,7 +215,7 @@ uv run embedded-docs-build all --chip STM32F407VG
 
 The pipeline is fully config-driven — bus maps, clock trees, peripheral lists, and document metadata all come from `chips.json`.
 
-## Acknowledgments / 致谢
+## Acknowledgments
 
 This project stands on the shoulders of excellent open-source tools:
 
