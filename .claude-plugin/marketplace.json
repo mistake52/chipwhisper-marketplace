@@ -10,42 +10,22 @@
     {
       "name": "embedded-docs",
       "description": "Query STM32 technical documentation with register-level precision — graph-verified clock trees, pin mappings, and peripheral configs",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/mistake52/chipwhisper-marketplace.git",
-        "path": "plugins/embedded-docs",
-        "ref": "main"
-      }
+      "source": "./plugins/embedded-docs"
     },
     {
       "name": "serial-debug",
       "description": "Serial port debugging for STM32 development boards over USB CDC ACM",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/mistake52/chipwhisper-marketplace.git",
-        "path": "plugins/serial-debug",
-        "ref": "main"
-      }
+      "source": "./plugins/serial-debug"
     },
     {
       "name": "simulation",
       "description": "Run STM32 firmware in QEMU without physical hardware — GDB register inspection and clock verification",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/mistake52/chipwhisper-marketplace.git",
-        "path": "plugins/simulation",
-        "ref": "main"
-      }
+      "source": "./plugins/simulation"
     },
     {
       "name": "stm32-firmware-dev",
       "description": "Complete STM32 firmware development skill — graph-verified HAL code by default, QEMU simulation, and serial hardware testing",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/mistake52/chipwhisper-marketplace.git",
-        "path": "plugins/stm32-firmware-dev",
-        "ref": "main"
-      }
+      "source": "./plugins/stm32-firmware-dev"
     }
   ]
 }

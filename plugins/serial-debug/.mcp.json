@@ -1,0 +1,9 @@
+{
+  "serial-debug": {
+    "command": "uv",
+    "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "python", "-m", "serial_debug_mcp.server"],
+    "env": {
+      "PYTHONPATH": ""
+    }
+  }
+}

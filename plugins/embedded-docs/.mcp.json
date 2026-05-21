@@ -1,0 +1,10 @@
+{
+  "embedded-docs": {
+    "command": "uv",
+    "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "python", "embedded_docs/server.py"],
+    "env": {
+      "PYTHONPATH": "",
+      "HF_HUB_OFFLINE": "1"
+    }
+  }
+}

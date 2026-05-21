@@ -1,0 +1,9 @@
+{
+  "simulation": {
+    "command": "uv",
+    "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "python", "-m", "simulation_mcp.server"],
+    "env": {
+      "PYTHONPATH": ""
+    }
+  }
+}
