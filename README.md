@@ -1,6 +1,6 @@
 # ChipWhisper Marketplace
 
-**STM32 bare-metal firmware development toolkit for Claude Code** — three MCP servers (documentation lookup, QEMU simulation, serial hardware debugging) plus a firmware development skill. From a natural language query to verified register values, simulated firmware, and hardware-tested code.
+**STM32 firmware development toolkit for Claude Code** — three MCP servers (documentation lookup, QEMU simulation, serial hardware debugging) plus a firmware development skill. From a natural language query to graph-verified HAL code, simulated firmware, and hardware-tested code.
 
 [中文文档 (Chinese README)](README.zh-CN.md)
 
@@ -8,9 +8,10 @@
 
 ## Why ChipWhisper
 
-Writing STM32 bare-metal firmware means navigating 1000-page reference manuals, cross-referencing SVD files, and debugging register configs that silently fail. ChipWhisper lets Claude Code do the heavy lifting:
+Writing STM32 firmware means navigating 1000-page reference manuals, cross-referencing SVD files, and debugging configs that silently fail — even with HAL. ChipWhisper lets Claude Code do the heavy lifting:
 
 - **Register-level precision** — Not just "GPIOA has a CRL register." We tell you CNF1=10 (push-pull), MODE1=11 (50MHz), and cite RM0008 Section 9.2.1, page 172 as the source. Every register value is traceable to the reference manual.
+- **Graph-verified HAL code** — The knowledge graph knows which bus each peripheral is on and which alternate function each pin uses. Every `__HAL_RCC_*_CLK_ENABLE()` call and every `GPIO_InitTypeDef.Alternate` value is backed by graph-verified hardware truth. No more "I2C hangs because I forgot to enable APB1."
 - **Phase -1 compatibility check** — Before writing a single line of code, Claude queries BOTH the docs MCP and simulation MCP. You get a 2×2 compatibility matrix showing exactly what's verified and what's not.
 - **Simulation catches bugs before hardware** — QEMU verifies clock initialization, GPIO configs, and register writes via GDB. Catches PLL hangs, bus faults, and unclocked peripheral writes without touching a physical board.
 - **Multi-chip, config-driven** — Adding a new STM32 chip means adding one JSON entry. The entire pipeline (download → parse → build graph → index → query) is parameterized by chip model.
@@ -114,7 +115,7 @@ The `stm32-firmware-dev` skill activates automatically when you mention STM32, e
 ```
 Phase -1: Compatibility Check   ── Dual MCP query (docs + sim availability)
 Phase  0: Documentation Research ── Register values from knowledge graph
-Phase  1: Code Generation        ── Bare-metal C with register-level access
+Phase  1: Code Generation        ── HAL-based C with graph-verified clock/pin config
 Phase  2: Simulation Verification── QEMU + GDB register inspection
 Phase  3: Hardware Testing       ── Flash + serial output capture
 ```
@@ -145,7 +146,7 @@ This tells you exactly what can be verified vs. what relies on general knowledge
 
 → Skill activates, runs Phase -1 compatibility check (F103 = FULL MCP),
   queries embedded-docs for I2C1 pin mapping + register config,
-  generates bare-metal C with Makefile + linker script,
+  generates HAL-based C with graph-verified clock enables, Makefile + linker script,
   optionally verifies in QEMU simulation.
 ```
 
@@ -246,7 +247,7 @@ This project stands on the shoulders of excellent tools:
 | [QEMU](https://www.qemu.org/) | Firmware simulation — catches clock hangs, bus faults, and GPIO config errors before hardware |
 | [Claude Code](https://claude.ai/code) | The platform that makes MCP servers and skills possible in an AI-assisted workflow |
 
-Special thanks to the STM32 bare-metal community whose reference manuals, application notes, and forum discussions make register-level firmware development possible.
+Special thanks to the STM32 embedded community whose reference manuals, application notes, and forum discussions make register-level firmware development possible.
 
 ## License
 
