@@ -7,9 +7,9 @@
   },
   "version": "0.1.0",
   "plugins": [
-    { "name": "embedded-docs", "source": "plugins/embedded-docs", "description": "Query STM32 technical documentation with register-level precision — graph-verified clock trees, pin mappings, and peripheral configs" },
-    { "name": "serial-debug", "source": "plugins/serial-debug", "description": "Serial port debugging for STM32 development boards over USB CDC ACM" },
-    { "name": "simulation", "source": "plugins/simulation", "description": "Run STM32 firmware in QEMU without physical hardware — GDB register inspection and clock verification" },
-    { "name": "stm32-firmware-dev", "source": "plugins/stm32-firmware-dev", "description": "Complete STM32 firmware development skill — graph-verified HAL code by default, QEMU simulation, and serial hardware testing" }
+    { "name": "embedded-docs", "source": "./plugins/embedded-docs", "description": "Query STM32 technical documentation with register-level precision — graph-verified clock trees, pin mappings, and peripheral configs" },
+    { "name": "serial-debug", "source": "./plugins/serial-debug", "description": "Serial port debugging for STM32 development boards over USB CDC ACM" },
+    { "name": "simulation", "source": "./plugins/simulation", "description": "Run STM32 firmware in QEMU without physical hardware — GDB register inspection and clock verification" },
+    { "name": "stm32-firmware-dev", "source": "./plugins/stm32-firmware-dev", "description": "Complete STM32 firmware development skill — graph-verified HAL code by default, QEMU simulation, and serial hardware testing" }
   ]
 }
