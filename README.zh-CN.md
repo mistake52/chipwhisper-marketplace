@@ -30,7 +30,7 @@
 
 | 插件 | 依赖 | 安装方法 |
 |--------|----------|-------|
-| **embedded-docs** | Qdrant + ML 模型 | 见下方 Qdrant 搭建 |
+| **embedded-docs** | Qdrant + 知识库已构建 | 见下方 Qdrant 搭建和构建知识库 |
 | **serial-debug** | 物理 STM32 开发板或 USB-UART 转接器 | `sudo usermod -aG dialout $USER` |
 | **simulation** | `qemu-system-arm` + `gdb-multiarch` | `sudo apt install qemu-system-arm gdb-multiarch` |
 | **stm32-firmware-dev** | 以上三个 MCP 服务器 | — |
@@ -39,36 +39,29 @@ Python 依赖由 `uv` **首次使用时自动安装**——无需手动 `pip ins
 
 ### Qdrant 搭建
 
-`embedded-docs` 插件使用 Qdrant 对参考手册文本块做向量搜索。启动一次后保持运行即可：
+`embedded-docs` 插件使用 Qdrant 进行向量搜索。启动一次后保持运行即可：
 
+**方案 A：docker run（一行命令，无需克隆仓库）**
 ```bash
-# 如果需要 docker-compose 文件，先克隆仓库
+docker run -d --name qdrant-stm32 \
+  -p 6333:6333 -p 6334:6334 \
+  -v qdrant_storage:/qdrant/storage \
+  --memory 512M --cpus 1.0 \
+  --restart unless-stopped \
+  qdrant/qdrant:latest
+```
+
+**方案 B：docker compose（需先克隆仓库）**
+```bash
 git clone https://github.com/mistake52/chipwhisper-marketplace.git
 cd chipwhisper-marketplace
-
-# 启动 Qdrant（512MB / 1CPU 限制，端口 6333）
 docker compose -f docker/docker-compose.yml up -d
+```
 
-# 验证服务正常
+验证 Qdrant 正常运行：
+```bash
 curl -s http://localhost:6333/healthz
 ```
-
-### 构建知识库
-
-首次查询某个芯片前，需要通过 Claude Code 内的 MCP 工具（或 CLI）构建知识图谱并索引到 Qdrant：
-
-```
-# 在 Claude Code 内运行
-embedded_docs_download  → 下载 RM0008 + 数据手册 + 勘误表 PDF
-embedded_docs_parse     → 提取文本为结构化 Markdown
-embedded_docs_build_graph → 从 SVD + 解析文档构建知识图谱
-embedded_docs_index     → 文本嵌入并上传到 Qdrant
-
-# 或使用 CLI
-uv run embedded-docs-build all --chip STM32F103C8
-```
-
-SVD 文件已内置于插件中。PDF 首次运行时从 ST.com 下载。
 
 ## 安装
 
@@ -87,6 +80,29 @@ claude mcp list
 # embedded-docs  → ✓ Connected
 # serial-debug   → ✓ Connected
 # simulation     → ✓ Connected
+```
+
+## 构建知识库
+
+首次查询某个芯片前，需要构建知识图谱并索引到 Qdrant。SVD 文件已内置于插件中，PDF 首次运行时从 ST.com 下载。
+
+**方案 A：在 Claude Code 内（推荐）**
+
+安装插件后，直接让 Claude Code 执行构建流水线。Claude 会按顺序调用以下 MCP 工具：
+
+| 步骤 | MCP 工具 | 作用 |
+|------|----------|--------------|
+| 1 | `embedded_docs_download` | 下载参考手册 + 数据手册 + 勘误表 PDF |
+| 2 | `embedded_docs_parse` | 提取文本为结构化 Markdown |
+| 3 | `embedded_docs_build_graph` | 从 SVD + 解析文档构建知识图谱 |
+| 4 | `embedded_docs_index` | 文本嵌入并上传到 Qdrant |
+
+直接说：*"为 STM32F103C8 构建知识库"*——Claude 会处理后续一切。
+
+**方案 B：CLI（需要克隆仓库）**
+```bash
+cd chipwhisper-marketplace
+uv run embedded-docs-build all --chip STM32F103C8
 ```
 
 ## 使用指南
@@ -193,22 +209,23 @@ Markdown 文本       ──[doc_chunker]──▶ DocumentChunk 节点（寄存
 
 ## 添加新芯片
 
+这需要编辑插件源码（fork 仓库或本地操作）：
+
 ```bash
 # 1. 在 data/chips.json 中新增芯片条目，包含 SVD、参考手册下载链接、
 #    时钟使能映射、总线拓扑、外设白名单和引脚映射。
 
 # 2. 将 SVD 文件放入 data/svd/
 
-# 3. 在 Claude Code 中运行流水线：
-embedded_docs_download --chip STM32F407VG
-embedded_docs_parse --chip STM32F407VG
-embedded_docs_build_graph --chip STM32F407VG
-embedded_docs_index --chip STM32F407VG
+# 3. 在 Claude Code 中运行流水线（Claude 会调用每个 MCP 工具）：
+#    "为 STM32F407VG 构建知识库"
+#    → 依次调用 embedded_docs_download → parse → build_graph → index
 
 # 4. 查询新芯片：
-embedded_docs_query --chip STM32F407VG "GPIO 端口模式寄存器偏移地址是多少？"
+#    "STM32F407VG 的 GPIO 端口模式寄存器偏移地址是多少？"
 
 # 或通过 CLI：
+cd chipwhisper-marketplace
 uv run embedded-docs-build all --chip STM32F407VG
 ```
 

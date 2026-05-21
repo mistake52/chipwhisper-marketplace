@@ -30,7 +30,7 @@ Writing STM32 bare-metal firmware means navigating 1000-page reference manuals, 
 
 | Plugin | Requires | Setup |
 |--------|----------|-------|
-| **embedded-docs** | Qdrant + ML model | See Qdrant setup below |
+| **embedded-docs** | Qdrant + knowledge base built | See Qdrant and Build sections below |
 | **serial-debug** | Physical STM32 board or USB-UART adapter | `sudo usermod -aG dialout $USER` |
 | **simulation** | `qemu-system-arm` + `gdb-multiarch` | `sudo apt install qemu-system-arm gdb-multiarch` |
 | **stm32-firmware-dev** | All three MCP servers above | — |
@@ -39,36 +39,29 @@ Python dependencies are **auto-installed** by `uv` on first use — no manual `p
 
 ### Qdrant Setup
 
-The `embedded-docs` plugin uses Qdrant for vector search over reference manual chunks. Start it once and leave it running:
+The `embedded-docs` plugin uses Qdrant for vector search. Start it once and leave it running:
 
+**Option A: docker run (one line, no clone needed)**
 ```bash
-# Clone the repo if you need the docker-compose file
+docker run -d --name qdrant-stm32 \
+  -p 6333:6333 -p 6334:6334 \
+  -v qdrant_storage:/qdrant/storage \
+  --memory 512M --cpus 1.0 \
+  --restart unless-stopped \
+  qdrant/qdrant:latest
+```
+
+**Option B: docker compose (clone the repo first)**
+```bash
 git clone https://github.com/mistake52/chipwhisper-marketplace.git
 cd chipwhisper-marketplace
-
-# Start Qdrant (512MB / 1CPU limit, port 6333)
 docker compose -f docker/docker-compose.yml up -d
+```
 
-# Verify it's healthy
+Verify Qdrant is healthy:
+```bash
 curl -s http://localhost:6333/healthz
 ```
-
-### Build the Knowledge Base
-
-Before querying a chip for the first time, build its knowledge graph and index it into Qdrant via MCP tools inside Claude Code (or via CLI):
-
-```
-# Inside Claude Code
-embedded_docs_download  → downloads reference manual + datasheet + errata PDFs
-embedded_docs_parse     → extracts text into structured Markdown
-embedded_docs_build_graph → builds knowledge graph from SVD + parsed docs
-embedded_docs_index     → embeds chunks and uploads to Qdrant
-
-# Or use the CLI
-uv run embedded-docs-build all --chip STM32F103C8
-```
-
-The SVD file is bundled with the plugin. PDFs are downloaded from ST.com on first run.
 
 ## Install
 
@@ -87,6 +80,29 @@ claude mcp list
 # embedded-docs  → ✓ Connected
 # serial-debug   → ✓ Connected
 # simulation     → ✓ Connected
+```
+
+## Build the Knowledge Base
+
+Before querying a chip for the first time, you need to build its knowledge graph and index it into Qdrant. The SVD file is bundled with the plugin; PDFs are downloaded from ST.com on first run.
+
+**Option A: Inside Claude Code (recommended)**
+
+With the plugins installed, ask Claude Code to run the build pipeline. Claude will call these MCP tools in sequence:
+
+| Step | MCP Tool | What it does |
+|------|----------|--------------|
+| 1 | `embedded_docs_download` | Downloads reference manual + datasheet + errata PDFs |
+| 2 | `embedded_docs_parse` | Extracts text into structured Markdown |
+| 3 | `embedded_docs_build_graph` | Builds knowledge graph from SVD + parsed docs |
+| 4 | `embedded_docs_index` | Embeds chunks and uploads to Qdrant |
+
+Just say: *"Build the knowledge base for STM32F103C8"* — Claude handles the rest.
+
+**Option B: CLI (requires cloning the repo)**
+```bash
+cd chipwhisper-marketplace
+uv run embedded-docs-build all --chip STM32F103C8
 ```
 
 ## Usage
@@ -194,22 +210,23 @@ Every module in the pipeline reads from this config. Adding a new chip means add
 
 ## Adding a New Chip
 
+This requires editing the plugin source (fork the repo or work locally):
+
 ```bash
 # 1. Add an entry to data/chips.json with the chip's SVD, reference manual URL,
 #    clock enable map, bus topology, peripheral whitelist, and pin mapping.
 
 # 2. Place the SVD file in data/svd/
 
-# 3. Inside Claude Code, run the pipeline:
-embedded_docs_download --chip STM32F407VG
-embedded_docs_parse --chip STM32F407VG
-embedded_docs_build_graph --chip STM32F407VG
-embedded_docs_index --chip STM32F407VG
+# 3. Inside Claude Code, run the pipeline (Claude calls each MCP tool):
+#    "Build the knowledge base for STM32F407VG"
+#    → calls embedded_docs_download → parse → build_graph → index
 
 # 4. Query the new chip:
-embedded_docs_query --chip STM32F407VG "What are the GPIO port mode register offsets?"
+#    "What are the GPIO port mode register offsets for STM32F407VG?"
 
 # Or via CLI:
+cd chipwhisper-marketplace
 uv run embedded-docs-build all --chip STM32F407VG
 ```
 
